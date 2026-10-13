@@ -965,6 +965,7 @@ dependencies = [
     { name = "numba" },
     { name = "numpy" },
     { name = "pyahocorasick" },
+    { name = "pyyaml" },
     { name = "rjieba" },
     { name = "tqdm" },
 ]
@@ -984,6 +985,7 @@ requires-dist = [
     { name = "numba", specifier = ">=0.68.0" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pyahocorasick", specifier = ">=2.3.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rjieba", git = "http://gitea.dell-p3460.local/kkew3/rjieba-py.git?rev=dev" },
     { name = "tqdm", specifier = ">=4.70.1" },
 ]
