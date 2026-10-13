@@ -131,26 +131,31 @@ fn update_values_once(
 #[pymodule]
 mod _core {
     use std::fs::File;
-    use std::io::BufReader;
+    use std::io::{BufReader, Seek, SeekFrom};
 
-    use pyo3::exceptions::PyIOError;
+    use pyo3::exceptions::{PyIOError, PyOSError};
     use pyo3::prelude::*;
 
     /// Compute the values (expected_counts, expected_seqlen, sent_count) from
     /// dag_file[offset..offset + sz] where `offset` and `sz` are measured in
-    /// bytes. The values are initialized to zero.
+    /// bytes. The values are initialized to zero. If `sz` is 0, read till end.
     #[pyfunction]
+    #[pyo3(signature = (hat_logprobs, dag_path, offset = 0, sz = 0))]
     fn compute_values(
-        dag_path: &str,
-        offset: i64,
-        mut sz: usize,
         hat_logprobs: Vec<f64>,
+        dag_path: &str,
+        offset: usize,
+        mut sz: usize,
     ) -> PyResult<(Vec<f64>, f64, f64)> {
         let mut values = crate::Values::zeros(hat_logprobs.len());
-        let mut dag_reader =
-            BufReader::new(File::open(dag_path).map_err(PyIOError::new_err)?);
+        let file = File::open(dag_path).map_err(PyIOError::new_err)?;
+        if sz == 0 {
+            let file_len = file.metadata().map_err(PyOSError::new_err)?.len();
+            sz = (file_len as usize).saturating_sub(offset);
+        }
+        let mut dag_reader = BufReader::new(file);
         dag_reader
-            .seek_relative(offset)
+            .seek(SeekFrom::Start(offset as u64))
             .map_err(PyIOError::new_err)?;
         while sz > 0 {
             crate::update_values_once(
