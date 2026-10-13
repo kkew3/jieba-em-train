@@ -1,3 +1,6 @@
 def compute_values(
-    dag_path: str, offset: int, sz: int, hat_logprobs: list[float]
+    hat_logprobs: list[float],
+    dag_name: str,
+    offset: int = 0,
+    sz: int = 0,
 ) -> tuple[list[float], float, float]: ...
