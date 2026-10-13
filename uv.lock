@@ -43,6 +43,7 @@ dependencies = [
     { name = "numba" },
     { name = "numpy" },
     { name = "pyahocorasick" },
+    { name = "rjieba" },
     { name = "tqdm" },
 ]
 
@@ -58,6 +59,7 @@ requires-dist = [
     { name = "numba", specifier = ">=0.68.0" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pyahocorasick", specifier = ">=2.3.1" },
+    { name = "rjieba", git = "http://gitea.dell-p3460.local/kkew3/rjieba-py.git?rev=dev" },
     { name = "tqdm", specifier = ">=4.70.1" },
 ]
 
@@ -342,6 +344,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa
 wheels = [
     { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
 ]
+
+[[package]]
+name = "rjieba"
+version = "0.2.1"
+source = { git = "http://gitea.dell-p3460.local/kkew3/rjieba-py.git?rev=dev#a9cd43ef4a3377a06cc5f17ebb11849a386d1283" }
 
 [[package]]
 name = "soupsieve"
