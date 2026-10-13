@@ -1,0 +1,30 @@
+[project]
+name = "jieba-em-train"
+version = "0.1.0"
+description = "Train jieba dictionary frequencies by EM"
+readme = "README.md"
+authors = [
+    { name = "kkew3", email = "kps6326@hotmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+jieba-em-train = "jieba_em_train:main"
+
+[tool.maturin]
+module-name = "jieba_em_train._core"
+python-packages = ["jieba_em_train"]
+python-source = "src"
+
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "src/**/*.rs" },
+    { file = "Cargo.toml" },
+    { file = "Cargo.lock" },
+]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
