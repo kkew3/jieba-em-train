@@ -140,13 +140,14 @@ mod _core {
     /// dag_file[offset..offset + sz] where `offset` and `sz` are measured in
     /// bytes. The values are initialized to zero. If `sz` is 0, read till end.
     #[pyfunction]
-    #[pyo3(signature = (hat_logprobs, dag_path, offset = 0, sz = 0))]
+    #[pyo3(signature = (hat_logprobs, dag_name, offset = 0, sz = 0))]
     fn compute_values(
         hat_logprobs: Vec<f64>,
-        dag_path: &str,
+        dag_name: &str,
         offset: usize,
         mut sz: usize,
     ) -> PyResult<(Vec<f64>, f64, f64)> {
+        let dag_path = format!("{dag_name}.dag");
         let mut values = crate::Values::zeros(hat_logprobs.len());
         let file = File::open(dag_path).map_err(PyIOError::new_err)?;
         if sz == 0 {
