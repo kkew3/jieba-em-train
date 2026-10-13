@@ -136,11 +136,6 @@ mod _core {
     use pyo3::exceptions::PyIOError;
     use pyo3::prelude::*;
 
-    #[pyfunction]
-    fn hello_from_bin() -> String {
-        "Hello from jieba-em-train!".to_string()
-    }
-
     /// Compute the values (expected_counts, expected_seqlen, sent_count) from
     /// dag_file[offset..offset + sz] where `offset` and `sz` are measured in
     /// bytes. The values are initialized to zero.

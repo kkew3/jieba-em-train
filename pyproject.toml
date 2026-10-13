@@ -22,7 +22,6 @@ dependencies = [
 ]
 
 [project.scripts]
-jieba-em-train = "jieba_em_train:main"
 build-dag = "jieba_em_train.build_dag:main"
 parse-msra-xml = "jieba_em_train.parse_msra_xml:main"
 
