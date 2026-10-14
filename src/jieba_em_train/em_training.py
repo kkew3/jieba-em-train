@@ -68,7 +68,7 @@ def train_loops(
                 hat_logprobs.tolist(), dag_name
             )
         else:
-            word_counts, seqlen, cnt = _core.compute_values(
+            word_counts, seqlen, cnt = _core.compute_values_parallel(
                 hat_logprobs.tolist(), dag_name, *splits
             )
         word_counts = np.array(word_counts) + pseudo_word_counts
