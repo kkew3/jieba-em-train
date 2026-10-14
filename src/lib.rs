@@ -80,7 +80,7 @@ fn update_values_once(
 
     // Compute backward scores.
     for start in (0..n).rev() {
-        lsebuf[start..].copy_from_slice(&bscores[start + 1..]);
+        lsebuf[start..n].copy_from_slice(&bscores[start + 1..n + 1]);
         let mut a = read_i32(&mut dag_reader, sz)?;
         while a != -1 {
             let j = a as usize;
@@ -88,7 +88,7 @@ fn update_values_once(
             lsebuf[j - 1] += hat_logprobs[v_idx];
             a = read_i32(&mut dag_reader, sz)?;
         }
-        bscores[start] = logsumexp(&lsebuf[start..]);
+        bscores[start] = logsumexp(&lsebuf[start..n]);
     }
     let z = bscores[0];
 
