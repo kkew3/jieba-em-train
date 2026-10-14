@@ -1,3 +1,4 @@
+import copy
 import math
 from pathlib import Path
 
@@ -45,6 +46,15 @@ def to_freq(log_theta, c=None):
         c = math.log(c)
     freqs = [int(x) for x in np.round(np.exp(log_theta + c), 0).tolist()]
     return freqs
+
+
+def export_vocab(v: Vocab, log_theta, c=None) -> Vocab:
+    freqs = to_freq(log_theta, c=c)
+    v = copy.deepcopy(v)
+    for word in v:
+        idx = v[word]
+        v.idx2freq[idx] = freqs[idx]
+    return v
 
 
 def configure_jieba(v: Vocab, log_theta=None, freq_c=None):
@@ -100,3 +110,7 @@ def run_eval(segmented_sents_path: str, v: Vocab, log_theta, freq_c=None):
         0, 0, 0, jb, iter_segmented_sentences(Path(segmented_sents_path))
     )
     return Fbeta(tp, fp, fn)
+
+
+def pprint_cut(segmented_sent: list[str], sep="/") -> str:
+    return sep.join(segmented_sent).replace(f"{sep}\n{sep}", "\n")
