@@ -1,3 +1,4 @@
+import concurrent.futures
 import math
 from datetime import datetime
 
@@ -28,26 +29,71 @@ def val_against_freq_c(val_msra_path: str, v: Vocab, log_theta):
     return best_freq_c, best_score
 
 
+def get_splits(dag_name: str, n_jobs: int):
+    offset_file = f"{dag_name}.dag.offset"
+    offset_arr = np.memmap(offset_file, dtype=np.int64, mode="r")
+    step = int(offset_arr.shape[0] / n_jobs) + 1
+    offsets = []
+    for j in range(0, offset_arr.shape[0], step):
+        offsets.append(offset_arr[j])
+    sizes = []
+    assert offsets
+    for j in range(len(offsets) - 1):
+        sizes.append(offsets[j + 1] - offsets[j])
+    sizes.append(0)
+    return offsets, sizes
+
+
+def compute_values(
+    hat_logprobs: list[float],
+    dag_name: str,
+    splits: tuple[list[int], list[int]] | None,
+):
+    if splits is None:
+        word_counts, seqlen, cnt = _core.compute_values(hat_logprobs, dag_name)
+        return word_counts, seqlen, cnt
+
+    offsets, sizes = splits
+    j = len(offsets)
+    word_counts = [0] * len(hat_logprobs)
+    seqlen = 0
+    cnt = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=j) as exe:
+        futures = [
+            exe.submit(_core.compute_values, hat_logprobs, dag_name, o, s)
+            for o, s in zip(offsets, sizes)
+        ]
+        for fut in concurrent.futures.as_completed(futures):
+            word_counts_worker, seqlen_worker, cnt_worker = fut.result()
+            for j in range(len(hat_logprobs)):
+                word_counts[j] += word_counts_worker[j]
+            seqlen += seqlen_worker
+            cnt += cnt_worker
+    return word_counts, seqlen, cnt
+
+
 def train_loops(
     v: Vocab,
     kappa: float,
     n_iter: int,
     dag_name: str,
     val_msra_path: str,
+    n_jobs: int = 1,
 ):
     log_theta = v.as_logprob_array()
     log_theta0 = v.as_logprob_array()
     tau = 0.1
     hat_logprobs = log_theta + math.log(1 - tau)
     results = {}
+    splits = get_splits(dag_name, n_jobs) if n_jobs > 1 else None
 
     freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
     results[-1] = (f1, log_theta, tau, freq_c)
     print(f"[{now()}] ITER -1 F1: {f1}")
     for train_iter in range(n_iter):
         pseudo_word_counts = np.exp(log_theta0 + math.log(kappa))
-        word_counts, seqlen, cnt = _core.compute_values(
-            hat_logprobs.tolist(), dag_name
+        word_counts, seqlen, cnt = compute_values(
+            hat_logprobs.tolist(), dag_name, splits
         )
         word_counts = np.array(word_counts) + pseudo_word_counts
         log_theta = np.log(word_counts) - np.log(np.sum(word_counts))
