@@ -47,10 +47,15 @@ def to_freq(log_theta, c=None):
     return freqs
 
 
-def configure_jieba(v: Vocab, log_theta, freq_c=None):
-    freqs = to_freq(log_theta, freq_c)
+def configure_jieba(v: Vocab, log_theta=None, freq_c=None):
     jb = rjieba.Jieba()
     jb.clear()
+    if log_theta is None:
+        for word in v:
+            jb.add_word(word, freq=v.freq(word), tag=None)
+            return jb
+
+    freqs = to_freq(log_theta, freq_c)
     for i in range(len(v)):
         word = v[i]
         f = freqs[i]
