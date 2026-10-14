@@ -35,7 +35,7 @@ def get_splits(dag_name: str, n_jobs: int):
     step = int(offset_arr.shape[0] / n_jobs) + 1
     offsets = []
     for j in range(0, offset_arr.shape[0], step):
-        offsets.append(offset_arr[j])
+        offsets.append(offset_arr[j].tolist())
     sizes = []
     assert offsets
     for j in range(len(offsets) - 1):
