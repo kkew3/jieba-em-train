@@ -62,14 +62,14 @@ def configure_jieba(v: Vocab, log_theta=None, freq_c=None):
     jb.clear()
     if log_theta is None:
         for word in v:
-            jb.add_word(word, freq=v.freq(word), tag=None)
+            jb.add_word(word, freq=v.freq(word), tag=v.tag(word))
             return jb
 
     freqs = to_freq(log_theta, freq_c)
     for i in range(len(v)):
         word = v[i]
         f = freqs[i]
-        jb.add_word(word, freq=f, tag=None)
+        jb.add_word(word, freq=f, tag=v.tag(word))
     return jb
 
 
