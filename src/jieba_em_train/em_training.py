@@ -73,8 +73,8 @@ def train_loops(
             )
         word_counts = np.array(word_counts) + pseudo_word_counts
         log_theta = np.log(word_counts) - np.log(np.sum(word_counts))
-        hat_logprobs = log_theta + math.log(1 - tau)
         tau = cnt / (cnt + seqlen)
+        hat_logprobs = log_theta + math.log(1 - tau)
         freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
         results[train_iter] = (f1, log_theta, tau, freq_c)
         print(f"[{now()}] ITER {train_iter} F1: {f1}")
