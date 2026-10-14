@@ -76,6 +76,8 @@ class Vocab:
     def log_prob(self, word, default="-inf"):
         if word not in self:
             return float(default)
+        if self.freq(word) == 0:
+            return float("-inf")
         return math.log(self.freq(word)) - math.log(self.total_freq)
 
     def as_logprob_array(self):
