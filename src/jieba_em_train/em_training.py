@@ -1,13 +1,12 @@
 import math
-import os
 from datetime import datetime
 
 import numpy as np
 
 from jieba_em_train import _core
 
-from .vocab import Vocab
 from .eval_jieba import run_eval
+from .vocab import Vocab
 
 
 def now():
