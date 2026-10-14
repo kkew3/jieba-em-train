@@ -135,6 +135,7 @@ mod _core {
 
     use pyo3::exceptions::{PyIOError, PyOSError};
     use pyo3::prelude::*;
+    use rayon::prelude::*;
 
     /// Compute the values (expected_counts, expected_seqlen, sent_count) from
     /// dag_file[offset..offset + sz] where `offset` and `sz` are measured in
@@ -166,6 +167,39 @@ mod _core {
                 &mut sz,
             )
             .map_err(PyIOError::new_err)?;
+        }
+        Ok((
+            values.expected_word_counts,
+            values.expected_seqlen,
+            values.sent_count,
+        ))
+    }
+
+    #[pyfunction]
+    #[pyo3(signature = (hat_logprobs, dag_name, offsets, sizes))]
+    fn compute_values_parallel(
+        hat_logprobs: Vec<f64>,
+        dag_name: &str,
+        offsets: Vec<usize>,
+        sizes: Vec<usize>,
+    ) -> PyResult<(Vec<f64>, f64, f64)> {
+        let splits: Vec<_> = offsets.into_iter().zip(sizes).collect();
+        let mut values = crate::Values::zeros(hat_logprobs.len());
+        let results: Vec<_> = splits
+            .par_iter()
+            .map(|(o, s)| {
+                compute_values(hat_logprobs.clone(), dag_name, *o, *s)
+            })
+            .collect();
+        for res in results {
+            let (word_counts, seqlen, cnt) = res?;
+            for (cum, wc) in
+                values.expected_word_counts.iter_mut().zip(word_counts)
+            {
+                *cum += wc;
+            }
+            values.expected_seqlen += seqlen;
+            values.sent_count += cnt;
         }
         Ok((
             values.expected_word_counts,
