@@ -1,0 +1,65 @@
+import math
+import os
+from datetime import datetime
+
+import numpy as np
+
+from jieba_em_train import _core
+
+from .vocab import Vocab
+from .eval_jieba import run_eval
+
+
+def now():
+    return datetime.now().isoformat()
+
+
+def val_against_freq_c(val_msra_path: str, v: Vocab, log_theta):
+    best_freq_c = None
+    best_score = None
+    freq_c_shift = [2, 10, 18, 26]
+    for cs in freq_c_shift:
+        freq_c = 0xFFFFFFFF >> cs
+        f1 = run_eval(val_msra_path, v, log_theta, freq_c).get()
+        if best_score is None or f1 > best_score:
+            best_freq_c = freq_c
+            best_score = f1
+    assert best_score is not None
+    assert best_freq_c is not None
+    return best_freq_c, best_score
+
+
+def train_loops(
+    v: Vocab,
+    kappa: float,
+    n_iter: int,
+    dag_name: str,
+    val_msra_path: str,
+):
+    log_theta = v.as_logprob_array()
+    log_theta0 = v.as_logprob_array()
+    tau = 0.1
+    hat_logprobs = log_theta + math.log(1 - tau)
+    results = {}
+
+    freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
+    results[-1] = (f1, log_theta, tau, freq_c)
+    print(f"[{now()}] ITER -1 F1: {f1}")
+    for train_iter in range(n_iter):
+        pseudo_word_counts = np.exp(log_theta0 + math.log(kappa))
+        word_counts, seqlen, cnt = _core.compute_values(
+            hat_logprobs.tolist(), dag_name
+        )
+        word_counts = np.array(word_counts) + pseudo_word_counts
+        log_theta = np.log(word_counts) - np.log(np.sum(word_counts))
+        hat_logprobs = log_theta + math.log(1 - tau)
+        tau = cnt / (cnt + seqlen)
+        freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
+        results[train_iter] = (f1, log_theta, tau, freq_c)
+        print(f"[{now()}] ITER {train_iter} F1: {f1}")
+    results_list = list(results.items())
+    best_iter, (best_f1, best_log_theta, best_tau, best_freq_c) = max(
+        results_list, key=lambda x: x[1][0]
+    )
+    print(f"Best iter: {best_iter} at F1: {best_f1}")
+    return best_f1, best_log_theta, best_tau, best_freq_c
