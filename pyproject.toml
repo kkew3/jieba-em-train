@@ -41,6 +41,9 @@ cache-keys = [
 [tool.uv.sources]
 rjieba = { git = "http://gitea.dell-p3460.local/kkew3/rjieba-py.git", rev = "dev" }
 
+[tool.ruff]
+line-length = 80
+
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
