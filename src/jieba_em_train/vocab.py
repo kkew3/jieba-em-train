@@ -6,6 +6,7 @@ class Vocab:
         self.tok2idx = {}
         self.idx2tok = []
         self.idx2freq = []
+        self.idx2tag = []
         self.total_freq = 0
 
     def __len__(self):
@@ -17,6 +18,7 @@ class Vocab:
                 self.tok2idx == value.tok2idx
                 and self.idx2tok == value.idx2tok
                 and self.idx2freq == value.idx2freq
+                and self.idx2tag == value.idx2tag
                 and self.total_freq == value.total_freq
             )
         return NotImplemented
@@ -48,6 +50,13 @@ class Vocab:
             return self.idx2freq[self.tok2idx[key]]
         raise TypeError("key")
 
+    def tag(self, key):
+        if isinstance(key, int):
+            return self.idx2tag[key]
+        if isinstance(key, str):
+            return self.idx2tag[self.tok2idx[key]]
+        raise TypeError("key")
+
     def __setitem__(self, key, freq):
         if isinstance(key, int):
             old_freq = self.idx2freq[key]
@@ -60,15 +69,22 @@ class Vocab:
         else:
             raise TypeError("key")
 
-    def add(self, word, freq, update=False):
+    def add(self, word, freq, tag=None, update=False):
         if word in self.tok2idx:
-            if self.idx2freq[self.tok2idx[word]] != freq and not update:
-                raise ValueError("word already exists with a different freq")
+            idx = self.tok2idx[word]
+            if (
+                self.idx2freq[idx] != freq or self.idx2tag[idx] != tag
+            ) and not update:
+                raise ValueError(
+                    "word already exists with a different freq/tag"
+                )
             self[word] = freq
+            self.idx2tag[self.tok2idx[word]] = tag
             return None
         idx = len(self)
         self.idx2tok.append(word)
         self.idx2freq.append(freq)
+        self.idx2tag.append(tag)
         self.tok2idx[word] = idx
         self.total_freq += freq
         return idx
@@ -93,8 +109,11 @@ class Vocab:
             self.dumpfile(outfile)
 
     def dumpfile(self, outfile):
-        for word, freq in zip(self.idx2tok, self.idx2freq):
-            outfile.write(f"{word} {freq}\n")
+        for word, freq, tag in zip(self.idx2tok, self.idx2freq, self.idx2tag):
+            if tag is None:
+                outfile.write(f"{word} {freq}\n")
+            else:
+                outfile.write(f"{word} {freq} {tag}\n")
 
     @classmethod
     def load(cls, path):
@@ -105,7 +124,10 @@ class Vocab:
     def loadfile(cls, infile):
         v = cls()
         for line in infile:
-            word, _, freq = line.rstrip("\n").partition(" ")
+            word, freq, *tag = line.rstrip("\n").split()
             freq = int(freq)
-            v.add(word, freq)
+            if tag:
+                v.add(word, freq, tag[0])
+            else:
+                v.add(word, freq)
         return v
