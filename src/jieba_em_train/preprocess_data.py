@@ -1,3 +1,4 @@
+import gzip
 import shutil
 from argparse import ArgumentParser
 from dataclasses import dataclass
@@ -68,7 +69,9 @@ class CorpusStats:
 
 def process_wiki_data_main():
     parser = ArgumentParser(
-        description="Download preprocessed fjcanyue/wikipedia-zh-cn from huggingface."
+        description=(
+            "Download preprocessed fjcanyue/wikipedia-zh-cn from huggingface."
+        )
     )
     parser.add_argument("tofile")
     parser.add_argument(
@@ -89,6 +92,12 @@ def process_wiki_data_main():
     )
     tofile = Path(ds).resolve()
     corpus_stats = CorpusStats.zero()
+    if tofile.suffix == ".gz":
+        _open = gzip.open
+        _mode = "wt"
+    else:
+        _open = open
+        _mode = "w"
     with NamedTemporaryFile(
         mode="w+", dir=tofile.parent, prefix="tmp", encoding="utf-8"
     ) as tmpout:
@@ -97,7 +106,7 @@ def process_wiki_data_main():
                 corpus_stats.update(blk)
                 tmpout.write(f"{blk}\n")
         tmpout.seek(0)
-        with open(tofile, "w", encoding="utf-8") as outfile:
+        with _open(tofile, _mode, encoding="utf-8") as outfile:
             corpus_stats.write_header(outfile)
             shutil.copyfileobj(tmpout, outfile)
 
