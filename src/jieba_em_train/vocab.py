@@ -134,6 +134,15 @@ class Vocab:
             logprob[idx] += math.log(freq)
         return logprob
 
+    def as_main_mask_array(self):
+        """True means the word belongs to the "main" vocab."""
+        import numpy as np
+
+        mask = np.ones(len(self), dtype=np.bool_)
+        for idx, is_main in enumerate(self.idx2main):
+            mask[idx] = is_main
+        return mask
+
     def dump(self, path: str, jieba_compatible: bool = True):
         with open(path, "w", encoding="utf-8") as outfile:
             self.dumpfile(outfile, jieba_compatible=jieba_compatible)
