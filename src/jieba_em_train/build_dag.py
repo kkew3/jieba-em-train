@@ -7,6 +7,40 @@ import numpy as np
 from .vocab import Vocab
 
 
+def build_dag_naive(v: Vocab, sentences, name):
+    """A deprecated naive referential implementation not used in production."""
+    fwd_path = name + ".f.dag"
+    bwd_path = name + ".b.dag"
+    adjl = [0, 0]  # the buffer for adjacency list
+    with open(fwd_path, "wb") as fout, open(bwd_path, "wb") as bout:
+        for sent in sentences:
+            n = len(sent)
+            adjl[1] = n
+
+            # Build forward adjacency list.
+            del adjl[2:]
+            for end in range(1, n + 1):
+                for i in range(end):
+                    if sent[i:end] in v:
+                        v_idx = v[sent[i:end]]
+                        adjl.extend([i, v_idx])
+                adjl.append(-1)
+            adjl[0] = len(adjl)
+            fout.write(np.array(adjl, dtype=np.int32).tobytes())
+
+            # Build backward adjacency list.
+            del adjl[2:]
+            for start in reversed(range(n)):
+                for j in range(start + 1, n + 1):
+                    if sent[start:j] in v:
+                        v_idx = v[sent[start:j]]
+                        adjl.extend([j, v_idx])
+                adjl.append(-1)
+            adjl[0] = len(adjl)
+            bout.write(np.array(adjl, dtype=np.int32).tobytes())
+    return fwd_path, bwd_path
+
+
 def build_dag(v: Vocab, sentences: Iterable[str], name: str):
     """
     Create two files:
