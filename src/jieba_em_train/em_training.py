@@ -1,9 +1,11 @@
 import collections
 import math
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
 import numpy as np
+from scipy import special as sp_special
 
 from jieba_em_train import _core
 
@@ -51,9 +53,94 @@ def suggest_tau(corpus_file: str):
     return 1 / (1 + b_star)
 
 
+@dataclass
+class GlobalPrior:
+    """
+    A global pseudocount applied to all words. The fields are pseudocount
+    scales; set to zero to disable the corresponding prior.
+
+    Parameters
+    ----------
+    kappa : float
+        The pseudocount scale.
+    """
+
+    kappa: float
+
+    def apply_prior(self, word_counts: list[float], v: Vocab):
+        """Return log_theta."""
+        logit_theta = np.logaddexp(
+            np.log(np.array(word_counts)),
+            np.log(self.kappa) + v.as_logprob_array,
+        )
+        return logit_theta - sp_special.logsumexp(logit_theta)
+
+
+@dataclass
+class MainSubsetPrior:
+    """
+    A pseudocount prior applied separately to main and non-main words. The
+    fields are pseudocount scales; set to zero to disable the corresponding
+    prior.
+
+    Parameters
+    ----------
+    mix_prior : np.ndarray, shape [2]
+        The pseudocounts applied to the mixing distribution [main, non_main].
+    kappa_main : float
+        The pseudocount scale applied to the main words.
+    kappa_non_main : float
+        The pseudocount scale applied to the non-main words, default 0.
+    """
+
+    mix_prior: np.ndarray
+    kappa_main: float
+    kappa_non_main: float = 1e-20
+
+    def apply_prior(self, word_counts: list[float], v: Vocab):
+        """Return log_theta."""
+        word_counts_ = np.array(word_counts)
+        main_mask = v.as_main_mask_array()
+        word_counts_partition_arr = (
+            np.array(
+                [
+                    np.sum(word_counts_[main_mask]),
+                    np.sum(word_counts_[~main_mask]),
+                ]
+            )
+            + self.mix_prior
+        )
+        log_pi = np.log(word_counts_partition_arr) - np.log(
+            np.sum(word_counts_partition_arr)
+        )
+        log_prior = v.as_logprob_array()
+        log_word_counts = np.log(word_counts_)
+        log_prior_main = log_prior - sp_special.logsumexp(log_prior[main_mask])
+        logit_theta_main = np.logaddexp(
+            log_word_counts, np.log(self.kappa_main) + log_prior_main
+        )
+        log_theta_main = logit_theta_main - sp_special.logsumexp(
+            logit_theta_main
+        )
+        log_prior_non_main = log_prior - sp_special.logsumexp(
+            log_prior[~main_mask]
+        )
+        logit_theta_non_main = np.logaddexp(
+            log_word_counts, np.log(self.kappa_non_main) + log_prior_non_main
+        )
+        log_theta_non_main = logit_theta_non_main - sp_special.logsumexp(
+            logit_theta_non_main
+        )
+        return np.where(
+            main_mask,
+            log_pi[0] + log_theta_main,
+            log_pi[1] + log_theta_non_main,
+        )
+
+
 def train_loops(
     v: Vocab,
-    kappa: float,
+    prior: GlobalPrior | MainSubsetPrior,
     n_iter: int,
     dag_name: str,
     val_msra_path: str,
@@ -61,7 +148,6 @@ def train_loops(
     return_option: Literal["best", "all"] = "best",
 ):
     log_theta = v.as_logprob_array()
-    log_theta0 = v.as_logprob_array()
     tau = 0.1
     hat_logprobs = log_theta + math.log(1 - tau)
     results = {}
@@ -70,15 +156,10 @@ def train_loops(
     results[-1] = (f1, log_theta, tau, freq_c)
     print(f"[{now()}] ITER -1 F1: {f1}")
     for train_iter in range(n_iter):
-        if kappa <= 0:
-            pseudo_word_counts = 0
-        else:
-            pseudo_word_counts = np.exp(log_theta0 + math.log(kappa))
         word_counts, seqlen, cnt = _core.compute_values_parallel(
             hat_logprobs.tolist(), dag_name, n_jobs=n_jobs
         )
-        word_counts = np.array(word_counts) + pseudo_word_counts
-        log_theta = np.log(word_counts) - np.log(np.sum(word_counts))
+        log_theta = prior.apply_prior(word_counts, v)
         tau = cnt / (cnt + seqlen)
         hat_logprobs = log_theta + math.log(1 - tau)
         freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
