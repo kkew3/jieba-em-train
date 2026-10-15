@@ -55,8 +55,7 @@ class Vocab:
 
     def uniform_freq_(self, value: int = 1):
         for i in range(len(self.idx2freq)):
-            self.total_freq = self.total_freq - self.idx2freq[i] + value
-            self.idx2freq[i] = value
+            self.update_freq(i, value)
 
     def tag(self, key: VocabKey):
         if isinstance(key, int):
