@@ -141,6 +141,7 @@ class MainSubsetPrior:
 def train_loops(
     v: Vocab,
     prior: GlobalPrior | MainSubsetPrior,
+    tau: float,
     n_iter: int,
     dag_name: str,
     val_msra_path: str,
@@ -148,7 +149,6 @@ def train_loops(
     return_option: Literal["best", "all"] = "best",
 ):
     log_theta = v.as_logprob_array()
-    tau = 0.1
     hat_logprobs = log_theta + math.log(1 - tau)
     results = {}
 
