@@ -1,8 +1,7 @@
 mod fbuf;
 
-use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, ErrorKind, Read, Seek, SeekFrom};
+use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom};
 
 use pyo3::prelude::*;
 
@@ -187,65 +186,6 @@ fn get_splits(
     Ok((offsets, sizes))
 }
 
-fn read_i32_unchecked(reader: impl BufRead) -> io::Result<i32> {
-    let mut sz = std::mem::size_of::<i32>();
-    read_i32(reader, &mut sz)
-}
-
-fn read_i32_unchecked_opt(reader: impl BufRead) -> io::Result<Option<i32>> {
-    match read_i32_unchecked(reader) {
-        Ok(v) => Ok(Some(v)),
-        Err(err) => match err.kind() {
-            ErrorKind::UnexpectedEof => Ok(None),
-            _ => Err(err),
-        },
-    }
-}
-
-fn suggest_tau(dag_name: &str) -> io::Result<f64> {
-    let dag_path = format!("{dag_name}.dag");
-    let file = File::open(dag_path)?;
-    let mut dag_reader = BufReader::new(file);
-    let mut n_hist: HashMap<i32, u32> = HashMap::new();
-    let mut n_cnt: u64 = 0;
-    loop {
-        let n = match read_i32_unchecked_opt(&mut dag_reader)? {
-            Some(n) => n,
-            None => break,
-        };
-        for _ in 0..n {
-            let mut a = read_i32_unchecked(&mut dag_reader)?;
-            while a != -1 {
-                a = read_i32_unchecked(&mut dag_reader)?;
-            }
-        }
-        let _n = read_i32_unchecked(&mut dag_reader)?;
-        assert_eq!(n, _n);
-        for _ in 0..n {
-            let mut a = read_i32_unchecked(&mut dag_reader)?;
-            while a != -1 {
-                a = read_i32_unchecked(&mut dag_reader)?;
-            }
-        }
-        n_hist.entry(n).and_modify(|x| *x += 1).or_insert(1);
-        n_cnt += 1;
-    }
-    let mut median_position = n_cnt / 2;
-    let mut median_bin = 0;
-    let mut keys: Vec<_> = n_hist.keys().collect();
-    keys.sort();
-    for k in keys {
-        let bin_cnt = n_hist[k] as u64;
-        if median_position < bin_cnt {
-            median_bin = *k;
-            break;
-        }
-        median_position -= bin_cnt;
-    }
-    let tau = 1.0 / (median_bin as f64 + 1.0);
-    Ok(tau)
-}
-
 /// A Python module implemented in Rust. The name of this module must match
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
@@ -254,13 +194,6 @@ mod _core {
     use pyo3::exceptions::PyIOError;
     use pyo3::prelude::*;
     use rayon::prelude::*;
-
-    /// Suggest an initial tau based on median sentence length. In general the
-    /// initial tau should be no smaller than this value.
-    #[pyfunction]
-    fn suggest_tau(dag_name: &str) -> PyResult<f64> {
-        crate::suggest_tau(dag_name).map_err(PyIOError::new_err)
-    }
 
     /// Compute the values (expected_counts, expected_seqlen, sent_count) from
     /// dag_file[offset..offset + sz] where `offset` and `sz` are measured in
