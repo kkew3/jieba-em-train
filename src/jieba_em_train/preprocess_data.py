@@ -1,3 +1,4 @@
+import itertools
 import gzip
 import shutil
 from argparse import ArgumentParser
@@ -67,6 +68,24 @@ class CorpusStats:
         outfile.write(f"#S {self.s}\n")
         outfile.write(f"#S99 {self.s99}\n")
         outfile.write(f"#S95 {self.s95}\n")
+
+    @classmethod
+    def read_header(cls, infile):
+        header = {}
+        for line in itertools.islice(infile, 6):
+            d, _, value = line.partition(" ")
+            value = int(value)
+            header[d] = value
+        return cls(
+            n=header["#N"],
+            c=header["#C"],
+            v=header["#V"],
+            s=header["#S"],
+            s99=header["#S99"],
+            s95=header["S95"],
+            _sq=None,
+            _v=None,
+        )
 
 
 def process_wiki_data_main():
