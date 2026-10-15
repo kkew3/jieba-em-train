@@ -68,7 +68,10 @@ def train_loops(
     # during `_core` call.
     time.sleep(1)
     for train_iter in range(n_iter):
-        pseudo_word_counts = np.exp(log_theta0 + math.log(kappa))
+        if kappa <= 0:
+            pseudo_word_counts = 0
+        else:
+            pseudo_word_counts = np.exp(log_theta0 + math.log(kappa))
         if splits is None:
             word_counts, seqlen, cnt = _core.compute_values(
                 hat_logprobs.tolist(), dag_name
