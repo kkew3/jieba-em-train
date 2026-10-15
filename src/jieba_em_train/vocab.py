@@ -46,6 +46,15 @@ class Vocab:
     def items(self):
         return self.tok2idx.items()
 
+    def copy(self):
+        v = Vocab()
+        v.tok2idx = self.tok2idx.copy()
+        v.idx2tok = self.idx2tok.copy()
+        v.idx2freq = self.idx2freq.copy()
+        v.idx2tag = self.idx2tag.copy()
+        v.total_freq = self.total_freq
+        return v
+
     def freq(self, key: VocabKey):
         if isinstance(key, int):
             return self.idx2freq[key]
