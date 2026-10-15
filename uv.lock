@@ -953,12 +953,18 @@ wheels = [
 ]
 
 [[package]]
+name = "jieba"
+version = "0.42.1"
+source = { git = "https://github.com/tirkarthi/jieba.git?rev=fix-warnings#9ad240225ce521400cf2f10c8921ab5e6cbf0a16" }
+
+[[package]]
 name = "jieba-em-train"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "datasets" },
+    { name = "jieba" },
     { name = "jupyter" },
     { name = "jupyterlab-execute-time" },
     { name = "lxml" },
@@ -979,6 +985,7 @@ dev = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "datasets", specifier = ">=5.1.0" },
+    { name = "jieba", git = "https://github.com/tirkarthi/jieba.git?rev=fix-warnings" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "jupyterlab-execute-time", specifier = ">=3.3.0" },
     { name = "lxml", specifier = ">=6.1.3" },
