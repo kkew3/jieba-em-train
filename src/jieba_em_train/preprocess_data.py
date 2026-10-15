@@ -35,9 +35,9 @@ class CorpusStats:
     # The 95th percentile of the number of chars in a sentence.
     s95: int
     # The cumulative percentiles of the number of chars in a sentence.
-    _sq: TDigest
+    _sq: TDigest | None
     # The cumulative unique chars in the corpus.
-    _v: set
+    _v: set | None
 
     @classmethod
     def zero(cls):
@@ -57,6 +57,8 @@ class CorpusStats:
         self.v = len(self._v)
         self.s99 = int(self._sq.percentile(99))
         self.s95 = int(self._sq.percentile(95))
+        self._sq = None
+        self._v = None
 
     def write_header(self, outfile):
         outfile.write(f"#N {self.n}\n")
