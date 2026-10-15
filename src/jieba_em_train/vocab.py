@@ -62,7 +62,7 @@ class Vocab:
             return self.idx2tag[self.tok2idx[key]]
         raise TypeError("key")
 
-    def __setitem__(self, key, freq):
+    def update_freq(self, key, freq):
         if isinstance(key, int):
             old_freq = self.idx2freq[key]
             self.idx2freq[key] = freq
@@ -74,6 +74,9 @@ class Vocab:
         else:
             raise TypeError("key")
 
+    def __setitem__(self, key, freq):
+        raise RuntimeError("use self.update_freq(key, freq) instead")
+
     def add(self, word, freq, tag=None, update=False):
         if word in self.tok2idx:
             idx = self.tok2idx[word]
@@ -83,7 +86,7 @@ class Vocab:
                 raise ValueError(
                     "word already exists with a different freq/tag"
                 )
-            self[word] = freq
+            self.update_freq(word, freq)
             self.idx2tag[self.tok2idx[word]] = tag
             return None
         idx = len(self)
