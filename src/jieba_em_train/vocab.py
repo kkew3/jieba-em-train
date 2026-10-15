@@ -50,6 +50,11 @@ class Vocab:
             return self.idx2freq[self.tok2idx[key]]
         raise TypeError("key")
 
+    def uniform_freq_(self, value: int = 1):
+        for i in range(len(self.idx2freq)):
+            self.total_freq = self.total_freq - self.idx2freq[i] + value
+            self.idx2freq[i] = value
+
     def tag(self, key):
         if isinstance(key, int):
             return self.idx2tag[key]
