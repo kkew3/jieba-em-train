@@ -25,6 +25,7 @@ dependencies = [
 
 [project.scripts]
 build-dag = "jieba_em_train.build_dag:main"
+download-wiki-data = "jieba_em_train.download_wiki:main"
 parse-msra-xml = "jieba_em_train.parse_msra_xml:main"
 
 [tool.maturin]
