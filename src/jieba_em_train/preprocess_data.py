@@ -73,6 +73,13 @@ class CorpusStats:
         )
 
 
+def iter_sentences(corpos_infile, **tqdm_kwargs):
+    """tqdm kwargs other than `total` can be supplied via `tqdm_kwargs`."""
+    stats = CorpusStats.read_header(corpos_infile)
+    for line in tqdm(corpos_infile, total=stats.n, **tqdm_kwargs):
+        yield line.rstrip("\n")
+
+
 def process_wiki_data_main():
     parser = ArgumentParser(
         description=(
