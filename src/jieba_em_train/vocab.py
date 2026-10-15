@@ -128,6 +128,9 @@ class Vocab:
 
         logprob = np.full(len(self), -math.log(self.total_freq))
         for idx, freq in enumerate(self.idx2freq):
+            if freq == 0:
+                logprob[idx] = float("-inf")
+                continue
             logprob[idx] += math.log(freq)
         return logprob
 
