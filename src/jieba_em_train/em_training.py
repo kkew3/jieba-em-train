@@ -1,6 +1,5 @@
 import collections
 import math
-import time
 from datetime import datetime
 from typing import Literal
 
@@ -70,9 +69,6 @@ def train_loops(
     freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
     results[-1] = (f1, log_theta, tau, freq_c)
     print(f"[{now()}] ITER -1 F1: {f1}")
-    # Sleep a bit so that `print` above gets flushed before GIL is released
-    # during `_core` call.
-    time.sleep(1)
     for train_iter in range(n_iter):
         if kappa <= 0:
             pseudo_word_counts = 0
@@ -88,7 +84,6 @@ def train_loops(
         freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
         results[train_iter] = (f1, log_theta, tau, freq_c)
         print(f"[{now()}] ITER {train_iter} F1: {f1}")
-        time.sleep(1)
     results_list = list(results.items())
     best_iter, (best_f1, best_log_theta, best_tau, best_freq_c) = max(
         results_list, key=lambda x: x[1][0]
