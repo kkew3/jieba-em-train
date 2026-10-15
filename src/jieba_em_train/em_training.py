@@ -1,5 +1,6 @@
 import math
 from datetime import datetime
+from typing import Literal
 
 import numpy as np
 
@@ -50,6 +51,7 @@ def train_loops(
     dag_name: str,
     val_msra_path: str,
     n_jobs: int = 1,
+    return_option: Literal["best", "all"] = "best",
 ):
     log_theta = v.as_logprob_array()
     log_theta0 = v.as_logprob_array()
@@ -83,4 +85,6 @@ def train_loops(
         results_list, key=lambda x: x[1][0]
     )
     print(f"Best iter: {best_iter} at F1: {best_f1}")
-    return best_f1, best_log_theta, best_tau, best_freq_c
+    if return_option == "all":
+        return results
+    return best_f1, (best_log_theta, best_tau, best_freq_c)
