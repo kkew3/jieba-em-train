@@ -30,21 +30,6 @@ def val_against_freq_c(val_msra_path: str, v: Vocab, log_theta):
     return best_freq_c, best_score
 
 
-def get_splits(dag_name: str, n_jobs: int):
-    offset_file = f"{dag_name}.dag.offset"
-    offset_arr = np.memmap(offset_file, dtype=np.int64, mode="r")
-    step = int(offset_arr.shape[0] / n_jobs) + 1
-    offsets = []
-    for j in range(0, offset_arr.shape[0], step):
-        offsets.append(offset_arr[j].tolist())
-    sizes = []
-    assert offsets
-    for j in range(len(offsets) - 1):
-        sizes.append(offsets[j + 1] - offsets[j])
-    sizes.append(0)
-    return offsets, sizes
-
-
 def train_loops(
     v: Vocab,
     kappa: float,
@@ -59,7 +44,6 @@ def train_loops(
     tau = 0.1
     hat_logprobs = log_theta + math.log(1 - tau)
     results = {}
-    splits = get_splits(dag_name, n_jobs) if n_jobs > 1 else None
 
     freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
     results[-1] = (f1, log_theta, tau, freq_c)
@@ -72,14 +56,9 @@ def train_loops(
             pseudo_word_counts = 0
         else:
             pseudo_word_counts = np.exp(log_theta0 + math.log(kappa))
-        if splits is None:
-            word_counts, seqlen, cnt = _core.compute_values(
-                hat_logprobs.tolist(), dag_name
-            )
-        else:
-            word_counts, seqlen, cnt = _core.compute_values_parallel(
-                hat_logprobs.tolist(), dag_name, *splits
-            )
+        word_counts, seqlen, cnt = _core.compute_values_parallel(
+            hat_logprobs.tolist(), dag_name, n_jobs=n_jobs
+        )
         word_counts = np.array(word_counts) + pseudo_word_counts
         log_theta = np.log(word_counts) - np.log(np.sum(word_counts))
         tau = cnt / (cnt + seqlen)

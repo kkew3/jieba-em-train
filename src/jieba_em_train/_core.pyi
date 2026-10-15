@@ -7,6 +7,5 @@ def compute_values(
 def compute_values_parallel(
     hat_logprobs: list[float],
     dag_name: str,
-    offsets: list[int],
-    sizes: list[int],
+    n_jobs: int = 1,
 ) -> tuple[list[float], float, float]: ...

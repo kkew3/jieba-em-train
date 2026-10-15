@@ -1,7 +1,7 @@
 mod fbuf;
 
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Seek, SeekFrom};
+use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom};
 
 use pyo3::prelude::*;
 
@@ -156,6 +156,36 @@ fn compute_values(
     ))
 }
 
+fn read_i64(mut reader: impl Read) -> io::Result<i64> {
+    let mut buf1 = [0u8; std::mem::size_of::<i64>()];
+    reader.read_exact(&mut buf1)?;
+    Ok(i64::from_ne_bytes(buf1))
+}
+
+fn get_splits(
+    dag_name: &str,
+    n_jobs: u32,
+) -> io::Result<(Vec<usize>, Vec<usize>)> {
+    let offset_path = format!("{dag_name}.dag.offset");
+    let mut file = File::open(offset_path)?;
+    const DATA_SIZE: u64 = std::mem::size_of::<i64>() as u64;
+    let num_sentences = file.metadata()?.len() / DATA_SIZE as u64;
+    let step = (num_sentences as f32 / n_jobs as f32 + 1.0) as u64;
+    let mut i = 0;
+    let mut offsets = Vec::new();
+    while i < num_sentences {
+        file.seek(SeekFrom::Start(i * DATA_SIZE))?;
+        offsets.push(read_i64(&mut file)? as usize);
+        i += step;
+    }
+    let n_jobs = offsets.len();
+    let mut sizes = vec![0usize; n_jobs];
+    for i in 0..n_jobs - 1 {
+        sizes[i] = offsets[i + 1] - offsets[i];
+    }
+    Ok((offsets, sizes))
+}
+
 /// A Python module implemented in Rust. The name of this module must match
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
@@ -181,13 +211,17 @@ mod _core {
     }
 
     #[pyfunction]
-    #[pyo3(signature = (hat_logprobs, dag_name, offsets, sizes))]
+    #[pyo3(signature = (hat_logprobs, dag_name, n_jobs = 1))]
     fn compute_values_parallel(
         hat_logprobs: Vec<f64>,
         dag_name: &str,
-        offsets: Vec<usize>,
-        sizes: Vec<usize>,
+        n_jobs: u32,
     ) -> PyResult<(Vec<f64>, f64, f64)> {
+        let (offsets, sizes) = if n_jobs <= 1 {
+            (vec![0], vec![0])
+        } else {
+            crate::get_splits(dag_name, n_jobs)?
+        };
         let splits: Vec<_> = offsets.into_iter().zip(sizes).collect();
         let mut values = crate::Values::zeros(hat_logprobs.len());
         let results: Vec<_> = splits
