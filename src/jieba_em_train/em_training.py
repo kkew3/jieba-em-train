@@ -1,3 +1,4 @@
+import collections
 import math
 import time
 from datetime import datetime
@@ -8,6 +9,7 @@ import numpy as np
 from jieba_em_train import _core
 
 from .eval_jieba import run_eval
+from .preprocess_data import CorpusStats
 from .vocab import Vocab
 
 
@@ -30,8 +32,24 @@ def val_against_freq_c(val_msra_path: str, v: Vocab, log_theta):
     return best_freq_c, best_score
 
 
-def suggest_tau(dag_name: str):
-    return _core.suggest_tau(dag_name)
+def suggest_tau(corpus_file: str):
+    """
+    Suggest an initial tau based on median sentence length. In general the
+    initial tau should be no smaller than this value.
+    """
+    bins = collections.defaultdict(int)
+    with open(corpus_file, encoding="utf-8") as infile:
+        stats = CorpusStats.read_header(infile)
+        for line in infile:
+            bins[len(line.rstrip("\n"))] += 1
+    _n = stats.n // 2
+    b_star = 0
+    for b in sorted(bins):
+        b_star = b
+        if _n < bins[b]:
+            break
+        _n -= bins[b]
+    return 1 / (1 + b_star)
 
 
 def train_loops(
