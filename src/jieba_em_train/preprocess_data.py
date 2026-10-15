@@ -31,22 +31,15 @@ class CorpusStats:
     v: int
     # Max number of chars in a sentence.
     s: int
-    # The 99th percentile of the number of chars in a sentence.
-    s99: int
-    # The 95th percentile of the number of chars in a sentence.
-    s95: int
-    # The cumulative percentiles of the number of chars in a sentence.
-    _sq: TDigest | None
     # The cumulative unique chars in the corpus.
     _v: set | None
 
     @classmethod
     def zero(cls):
-        return cls(n=0, c=0, v=0, s=0, s99=0, s95=0, _sq=TDigest(), _v=set())
+        return cls(n=0, c=0, v=0, s=0, _v=set())
 
     def update(self, sentence, flush=False):
         l_ = len(sentence)
-        self._sq.update(l_)
         self.s = max(self.s, l_)
         self.n += 1
         self._v.update(sentence)
@@ -56,9 +49,6 @@ class CorpusStats:
 
     def finish(self):
         self.v = len(self._v)
-        self.s99 = int(self._sq.percentile(99))
-        self.s95 = int(self._sq.percentile(95))
-        self._sq = None
         self._v = None
 
     def write_header(self, outfile):
@@ -66,13 +56,11 @@ class CorpusStats:
         outfile.write(f"#C {self.c}\n")
         outfile.write(f"#V {self.v}\n")
         outfile.write(f"#S {self.s}\n")
-        outfile.write(f"#S99 {self.s99}\n")
-        outfile.write(f"#S95 {self.s95}\n")
 
     @classmethod
     def read_header(cls, infile):
         header = {}
-        for line in itertools.islice(infile, 6):
+        for line in itertools.islice(infile, 4):
             d, _, value = line.partition(" ")
             value = int(value)
             header[d] = value
@@ -81,9 +69,6 @@ class CorpusStats:
             c=header["#C"],
             v=header["#V"],
             s=header["#S"],
-            s99=header["#S99"],
-            s95=header["S95"],
-            _sq=None,
             _v=None,
         )
 
