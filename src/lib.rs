@@ -1,6 +1,7 @@
 mod fbuf;
 
-use std::io::{self, BufRead};
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Seek, SeekFrom};
 
 use pyo3::prelude::*;
 
@@ -125,15 +126,42 @@ fn update_values_once(
     Ok(())
 }
 
+fn compute_values(
+    hat_logprobs: &[f64],
+    dag_name: &str,
+    offset: usize,
+    mut sz: usize,
+) -> io::Result<(Vec<f64>, f64, f64)> {
+    let dag_path = format!("{dag_name}.dag");
+    let mut values = crate::Values::zeros(hat_logprobs.len());
+    let file = File::open(dag_path)?;
+    if sz == 0 {
+        let file_len = file.metadata()?.len();
+        sz = (file_len as usize).saturating_sub(offset);
+    }
+    let mut dag_reader = BufReader::new(file);
+    dag_reader.seek(SeekFrom::Start(offset as u64))?;
+    while sz > 0 {
+        crate::update_values_once(
+            &mut values,
+            &mut dag_reader,
+            &hat_logprobs,
+            &mut sz,
+        )?;
+    }
+    Ok((
+        values.expected_word_counts,
+        values.expected_seqlen,
+        values.sent_count,
+    ))
+}
+
 /// A Python module implemented in Rust. The name of this module must match
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
 mod _core {
-    use std::fs::File;
-    use std::io::{BufReader, Seek, SeekFrom};
-
-    use pyo3::exceptions::{PyIOError, PyOSError};
+    use pyo3::exceptions::PyIOError;
     use pyo3::prelude::*;
     use rayon::prelude::*;
 
@@ -146,33 +174,10 @@ mod _core {
         hat_logprobs: Vec<f64>,
         dag_name: &str,
         offset: usize,
-        mut sz: usize,
+        sz: usize,
     ) -> PyResult<(Vec<f64>, f64, f64)> {
-        let dag_path = format!("{dag_name}.dag");
-        let mut values = crate::Values::zeros(hat_logprobs.len());
-        let file = File::open(dag_path).map_err(PyIOError::new_err)?;
-        if sz == 0 {
-            let file_len = file.metadata().map_err(PyOSError::new_err)?.len();
-            sz = (file_len as usize).saturating_sub(offset);
-        }
-        let mut dag_reader = BufReader::new(file);
-        dag_reader
-            .seek(SeekFrom::Start(offset as u64))
-            .map_err(PyIOError::new_err)?;
-        while sz > 0 {
-            crate::update_values_once(
-                &mut values,
-                &mut dag_reader,
-                &hat_logprobs,
-                &mut sz,
-            )
-            .map_err(PyIOError::new_err)?;
-        }
-        Ok((
-            values.expected_word_counts,
-            values.expected_seqlen,
-            values.sent_count,
-        ))
+        crate::compute_values(&hat_logprobs, dag_name, offset, sz)
+            .map_err(PyIOError::new_err)
     }
 
     #[pyfunction]
@@ -188,7 +193,7 @@ mod _core {
         let results: Vec<_> = splits
             .par_iter()
             .map(|(o, s)| {
-                compute_values(hat_logprobs.clone(), dag_name, *o, *s)
+                crate::compute_values(&hat_logprobs, dag_name, *o, *s)
             })
             .collect();
         for res in results {
