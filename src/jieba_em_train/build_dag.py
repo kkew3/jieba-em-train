@@ -68,23 +68,15 @@ def build_dag(v: Vocab, sentences: Iterable[str], name: str):
 
 
 def main():
-    import itertools
     from argparse import ArgumentParser
 
     from tqdm import tqdm
 
-    def parse_directive(header: dict[str, int], line: str):
-        assert line.startswith("#")
-        d, _, value = line.partition(" ")
-        value = int(value)
-        header[d] = value
+    from .preprocess_data import CorpusStats
 
     def iter_sentences(infile):
-        header = {}
-        # 6: as written by `preprocess_data.CorpusStats` class.
-        for line in itertools.islice(infile, 6):
-            parse_directive(header, line)
-        for line in tqdm(infile, total=header["#N"], mininterval=5):
+        stats = CorpusStats.read_header(infile)
+        for line in tqdm(infile, total=stats.n, mininterval=5):
             yield line.rstrip("\n")
 
     parser = ArgumentParser(description="Create DAG files.")
