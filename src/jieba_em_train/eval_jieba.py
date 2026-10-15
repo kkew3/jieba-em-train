@@ -38,7 +38,7 @@ def count_pred_stats(tp, fp, fn, jb, segmented_sentences):
     return tp, fp, fn
 
 
-def to_freq(log_theta, c=None):
+def to_freq(log_theta, c: int | float | None = None):
     if c is None:
         c = math.log(0xFFFFFFFF >> 2)
     elif isinstance(c, int):
