@@ -57,43 +57,32 @@ class Vocab:
         v.total_freq = self.total_freq
         return v
 
-    def freq(self, key: VocabKey):
+    def _normalize_key(self, key: VocabKey) -> int:
         if isinstance(key, int):
-            return self.idx2freq[key]
+            return key
         if isinstance(key, str):
-            return self.idx2freq[self.tok2idx[key]]
+            return self.tok2idx[key]
         raise TypeError("key")
+
+    def freq(self, key: VocabKey):
+        return self.idx2freq[self._normalize_key(key)]
 
     def uniform_freq_(self, value: int = 1):
         for i in range(len(self.idx2freq)):
             self.update_freq(i, value)
 
     def tag(self, key: VocabKey):
-        if isinstance(key, int):
-            return self.idx2tag[key]
-        if isinstance(key, str):
-            return self.idx2tag[self.tok2idx[key]]
-        raise TypeError("key")
+        return self.idx2tag[self._normalize_key(key)]
 
     def is_main(self, key: VocabKey):
         """Check if `key` belongs to the *main* vocab."""
-        if isinstance(key, int):
-            return self.idx2main[key]
-        if isinstance(key, str):
-            return self.idx2main[self.tok2idx[key]]
-        raise TypeError("key")
+        return self.idx2main[self._normalize_key(key)]
 
     def update_freq(self, key: VocabKey, freq: int):
-        if isinstance(key, int):
-            old_freq = self.idx2freq[key]
-            self.idx2freq[key] = freq
-            self.total_freq = self.total_freq - old_freq + freq
-        elif isinstance(key, str):
-            old_freq = self.idx2freq[self.tok2idx[key]]
-            self.idx2freq[self.tok2idx[key]] = freq
-            self.total_freq = self.total_freq - old_freq + freq
-        else:
-            raise TypeError("key")
+        idx = self._normalize_key(key)
+        old_freq = self.idx2freq[idx]
+        self.idx2freq[idx] = freq
+        self.total_freq = self.total_freq - old_freq + freq
 
     def __setitem__(self, key, freq):
         raise RuntimeError("use self.update_freq(key, freq) instead")
