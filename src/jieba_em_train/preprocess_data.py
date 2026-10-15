@@ -105,6 +105,7 @@ def process_wiki_data_main():
             for blk in split_blocks(text):
                 corpus_stats.update(blk)
                 tmpout.write(f"{blk}\n")
+        corpus_stats.finish()
         tmpout.seek(0)
         with _open(tofile, _mode, encoding="utf-8") as outfile:
             corpus_stats.write_header(outfile)
@@ -117,6 +118,7 @@ def process_html_data(html_infile, dataset_outfile):
     for sent in soup.find_all("p"):
         for blk in split_blocks(sent.text):
             corpus_stats.update(blk)
+    corpus_stats.finish()
     corpus_stats.write_header(dataset_outfile)
     for sent in soup.find_all("p"):
         for blk in split_blocks(sent.text):
