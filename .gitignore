@@ -9,6 +9,13 @@ wheels/
 # Virtual environments
 .venv
 
+# Tools
+.pytest_cache/
+.ruff_cache/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
 # Rust
 target/
 *.so
