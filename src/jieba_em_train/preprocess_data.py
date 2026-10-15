@@ -1,6 +1,8 @@
+from argparse import ArgumentParser
 from dataclasses import dataclass
 
 import jieba
+from bs4 import BeautifulSoup
 from tdigest import TDigest
 
 
@@ -57,3 +59,30 @@ class CorpusStats:
         outfile.write(f"#S {self.s}\n")
         outfile.write(f"#S99 {self.s99}\n")
         outfile.write(f"#S95 {self.s95}\n")
+
+
+def process_html_data(html_infile, dataset_outfile):
+    soup = BeautifulSoup(html_infile, "lxml")
+    corpus_stats = CorpusStats.zero()
+    for sent in soup.find_all("p"):
+        for blk in split_blocks(sent.text):
+            corpus_stats.update(blk)
+    corpus_stats.write_header(dataset_outfile)
+    for sent in soup.find_all("p"):
+        for blk in split_blocks(sent.text):
+            dataset_outfile.write(f"{blk}\n")
+
+
+def process_html_data_main():
+    parser = ArgumentParser(
+        description="Process an html corpus into dataset file."
+    )
+    parser.add_argument("html_path")
+    parser.add_argument("output_path")
+    args = parser.parse_args()
+
+    with (
+        open(args.html_path, "rb") as infile,
+        open(args.output_path, "w", encoding="utf-8") as outfile,
+    ):
+        process_html_data(infile, outfile)
