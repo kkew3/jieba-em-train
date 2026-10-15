@@ -32,7 +32,7 @@ class Vocab:
         if isinstance(key, int):
             return 0 <= key < len(self)
         if isinstance(key, str):
-            return key in self.idx2tok
+            return key in self.tok2idx
         raise TypeError("key")
 
     def __getitem__(self, key: VocabKey):
