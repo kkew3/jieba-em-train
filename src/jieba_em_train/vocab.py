@@ -1,7 +1,7 @@
 import math
 from typing import TypeAlias
 
-VocabKey: TypeAlias = str | int
+VocabKey: TypeAlias = str | int  # noqa: UP040
 
 
 class Vocab:

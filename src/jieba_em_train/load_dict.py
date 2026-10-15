@@ -42,18 +42,17 @@ def load_rime_dict_into_vocab(v: Vocab, rime_dict_path):
                 if line_trim == "---":
                     stage = "header"
                     continue
-            elif stage == "header":
-                if line_trim == "...":
-                    # Parse header and load sub-tables.
-                    header_obj = parse_rime_dict_header("".join(header_lines))
-                    columns = header_obj["columns"]
-                    for name in header_obj["import_tables"]:
-                        table_path = Path(rime_dict_path).parent / (
-                            name + ".dict.yaml"
-                        )
-                        load_rime_dict_into_vocab(v, table_path)
-                    stage = "payload"
-                    continue
+            elif stage == "header" and line_trim == "...":
+                # Parse header and load sub-tables.
+                header_obj = parse_rime_dict_header("".join(header_lines))
+                columns = header_obj["columns"]
+                for name in header_obj["import_tables"]:
+                    table_path = Path(rime_dict_path).parent / (
+                        name + ".dict.yaml"
+                    )
+                    load_rime_dict_into_vocab(v, table_path)
+                stage = "payload"
+                continue
             if stage == "before_header":
                 continue
             if stage == "header":

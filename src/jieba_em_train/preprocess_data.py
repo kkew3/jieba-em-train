@@ -1,5 +1,5 @@
-import itertools
 import gzip
+import itertools
 import shutil
 from argparse import ArgumentParser
 from dataclasses import dataclass
