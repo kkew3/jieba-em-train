@@ -101,12 +101,15 @@ The backward dag file is a flattened array of the following:
 ```
 """
 
+from argparse import ArgumentParser
 from collections import defaultdict
 from collections.abc import Iterable
 
+from tqdm import tqdm
 import ahocorasick
 import numpy as np
 
+from .preprocess_data import iter_sentences
 from .vocab import Vocab
 
 
@@ -205,17 +208,6 @@ def build_dag(v: Vocab, sentences: Iterable[str], name: str):
 
 
 def main():
-    from argparse import ArgumentParser
-
-    from tqdm import tqdm
-
-    from .preprocess_data import CorpusStats
-
-    def iter_sentences(infile):
-        stats = CorpusStats.read_header(infile)
-        for line in tqdm(infile, total=stats.n, mininterval=5):
-            yield line.rstrip("\n")
-
     parser = ArgumentParser(description="Create DAG files.")
     parser.add_argument("vocab_file", help="the vocabulary to load")
     parser.add_argument("sentences_file", help="the sentences file")
@@ -224,6 +216,8 @@ def main():
 
     v = Vocab.load(args.vocab_file)
     with open(args.sentences_file, encoding="utf-8") as infile:
-        paths = build_dag(v, iter_sentences(infile), args.out_name)
+        paths = build_dag(
+            v, iter_sentences(infile, mininterval=5), args.out_name
+        )
     for path in paths:
         print("Created:", path)
