@@ -10,6 +10,7 @@ class Vocab:
         self.idx2tok = []
         self.idx2freq = []
         self.idx2tag = []
+        self.idx2main = []
         self.total_freq = 0
 
     def __len__(self):
@@ -22,6 +23,7 @@ class Vocab:
                 and self.idx2tok == value.idx2tok
                 and self.idx2freq == value.idx2freq
                 and self.idx2tag == value.idx2tag
+                and self.idx2main == value.idx2main
                 and self.total_freq == value.total_freq
             )
         return NotImplemented
@@ -73,6 +75,14 @@ class Vocab:
             return self.idx2tag[self.tok2idx[key]]
         raise TypeError("key")
 
+    def is_main(self, key: VocabKey):
+        """Check if `key` belongs to the *main* vocab."""
+        if isinstance(key, int):
+            return self.idx2main[key]
+        if isinstance(key, str):
+            return self.idx2main[self.tok2idx[key]]
+        raise TypeError("key")
+
     def update_freq(self, key: VocabKey, freq: int):
         if isinstance(key, int):
             old_freq = self.idx2freq[key]
@@ -88,13 +98,20 @@ class Vocab:
     def __setitem__(self, key, freq):
         raise RuntimeError("use self.update_freq(key, freq) instead")
 
-    def append(self, word: str, freq: int, tag: str | None = None):
+    def append(
+        self,
+        word: str,
+        freq: int,
+        tag: str | None = None,
+        is_main: bool = True,
+    ):
         if word in self:
             raise ValueError("word already exists")
         idx = len(self)
         self.idx2tok.append(word)
         self.idx2freq.append(freq)
         self.idx2tag.append(tag)
+        self.idx2main.append(is_main)
         self.tok2idx[word] = idx
         self.total_freq += freq
         return idx
@@ -114,30 +131,43 @@ class Vocab:
             logprob[idx] += math.log(freq)
         return logprob
 
-    def dump(self, path: str):
+    def dump(self, path: str, jieba_compatible: bool = True):
         with open(path, "w", encoding="utf-8") as outfile:
-            self.dumpfile(outfile)
+            self.dumpfile(outfile, jieba_compatible=jieba_compatible)
 
-    def dumpfile(self, outfile):
-        for word, freq, tag in zip(self.idx2tok, self.idx2freq, self.idx2tag):
-            if tag is None:
-                outfile.write(f"{word} {freq}\n")
+    def dumpfile(self, outfile, jieba_compatible: bool = True):
+        for word, freq, tag, main in zip(
+            self.idx2tok, self.idx2freq, self.idx2tag, self.idx2main
+        ):
+            if jieba_compatible:
+                main_marker = ""
+            elif main:
+                main_marker = "+"
             else:
-                outfile.write(f"{word} {freq} {tag}\n")
+                main_marker = "-"
+            if tag is None:
+                outfile.write(f"{main_marker}{word} {freq}\n")
+            else:
+                outfile.write(f"{main_marker}{word} {freq} {tag}\n")
 
     @classmethod
-    def load(cls, path: str):
+    def load(cls, path: str, jieba_compatible: bool = True):
         with open(path, encoding="utf-8") as infile:
-            return cls.loadfile(infile)
+            return cls.loadfile(infile, jieba_compatible=jieba_compatible)
 
     @classmethod
-    def loadfile(cls, infile):
+    def loadfile(cls, infile, jieba_compatible: bool = True):
         v = cls()
         for line in infile:
             word, freq, *tag = line.rstrip("\n").split()
             freq = int(freq)
-            if tag:
-                v.append(word, freq, tag[0])
+            if jieba_compatible:
+                is_main = True
             else:
-                v.append(word, freq)
+                main_marker, word = word[0], word[1:]
+                is_main = main_marker == "+"
+            if tag:
+                v.append(word, freq, tag[0], is_main=is_main)
+            else:
+                v.append(word, freq, is_main=is_main)
         return v

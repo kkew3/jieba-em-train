@@ -14,3 +14,16 @@ def test_dump_load():
     buf.seek(0)
     v2 = Vocab.loadfile(buf)
     assert v == v2
+
+
+def test_dump_load_jieba_incompatible():
+    v = Vocab()
+    v.append("甲", 3, "n")
+    v.append("甲乙", 2)
+    v.append("甲乙丙", 1, is_main=False)
+    v.append("乙", 2)
+    buf = StringIO()
+    v.dumpfile(buf, jieba_compatible=False)
+    buf.seek(0)
+    v2 = Vocab.loadfile(buf, jieba_compatible=False)
+    assert v == v2
