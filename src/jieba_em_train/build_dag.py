@@ -81,7 +81,8 @@ def main():
 
     def iter_sentences(infile):
         header = {}
-        for line in itertools.islice(infile, 4):
+        # 6: as written by `preprocess_data.CorpusStats` class.
+        for line in itertools.islice(infile, 6):
             parse_directive(header, line)
         for line in tqdm(infile, total=header["#N"], mininterval=5):
             yield line.rstrip("\n")
