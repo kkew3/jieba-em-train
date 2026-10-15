@@ -1,4 +1,3 @@
-import copy
 import math
 from pathlib import Path
 
@@ -50,7 +49,7 @@ def to_freq(log_theta, c=None):
 
 def export_vocab(v: Vocab, log_theta, c=None) -> Vocab:
     freqs = to_freq(log_theta, c=c)
-    v = copy.deepcopy(v)
+    v = v.copy()
     for word in v:
         idx = v[word]
         v.update_freq(idx, freqs[idx])
