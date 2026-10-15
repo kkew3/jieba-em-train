@@ -53,7 +53,7 @@ def export_vocab(v: Vocab, log_theta, c=None) -> Vocab:
     v = copy.deepcopy(v)
     for word in v:
         idx = v[word]
-        v.idx2freq[idx] = freqs[idx]
+        v.update_freq(idx, freqs[idx])
     return v
 
 
