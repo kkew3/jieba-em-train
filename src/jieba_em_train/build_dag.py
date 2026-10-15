@@ -1,3 +1,106 @@
+"""
+# DAG format spec
+
+File extension:
+
+- `*.f.dag` for forward dag, where the neighbors in the adjacency list are in-neighbors.
+- `*.b.dag` for backward dag, where the neighbors in the adjacency list are out-neighbors.
+
+Data types:
+
+- All tokens are `i32`.
+
+Spec:
+
+```
+FILE           ::= ( DAG_SEGMENT )+
+DAG_SEGMENT    ::= SEGMENT_LENGTH . NUM_DAG_NODE . ADJACENCY_LIST
+ADJACENCY_LIST ::= ( NODE )+                                        // NUM_DAG_NODE repetition of NODE_LIST
+NODE           ::= EDGE_LIST . TERMINAL
+EDGE_LIST      ::= ( EDGE )+
+EDGE           ::= OPPOSITE_END_NODE_IDX . VOCAB_IDX
+TERMINAL       ::= "-1"
+```
+
+For example, let the vocabulary `V` be:
+
+```
+[0] 甲
+[1] 甲乙
+[2] 甲乙丙
+[3] 乙
+```
+
+Let the sentences be:
+
+```
+[0] 甲乙甲乙
+[1] 甲乙丙乙甲
+```
+
+Then the forward dag file is a flattened array of the following:
+
+```c
+18             // there are 18 numbers in this segment, including "18" itself;
+4              // there are 4 nodes in the adjacency list;
+0 0 -1         // current edge end is node 1;
+               // (0, .): the word spans [0, 1); (., 0): the word is V[0]="甲";
+0 1 1 3 -1     // current edge end is node 2;
+               // (0, .): the word spans [0, 2); (., 1): the word is V[1]="甲乙";
+               // (1, .): the word spans [1, 2); (., 3): the word is V[3]="乙";
+2 0 -1         // current edge end is node 3;
+               // (2, .): the word spans [2, 3); (., 0): the word is V[0]="甲";
+2 1 3 3 -1     // current edge end is node 4;
+               // (2, .): the word spans [2, 4); (., 1): the word is V[1]="甲乙";
+               // (3, .): the word spans [3, 4); (., 3): the word is V[3]="乙";
+
+19             // there are 18 numbers in this segment, including "19" itself;
+5              // there are 5 nodes in the adjacency list;
+0 0 -1         // current edge is node 1;
+               // (0, .): the word spans [0, 1); (., 0): the word is V[0]="甲";
+0 1 1 3 -1     // current edge end is node 2;
+               // (0, .): the word spans [0, 2); (., 1): the word is V[1]="甲乙";
+               // (1, .): the word spans [1, 2); (., 3): the word is V[3]="乙";
+0 2 -1         // current edge end is node 3;
+               // (0, .): the word spans [0, 3); (., 2): the word is V[2]="甲乙丙";
+3 3 -1         // current edge end is node 4;
+               // (3, .): the word spans [3, 4); (., 3): the word is V[3]="乙";
+4 0 -1         // current edge end is node 5;
+               // (4, .): the word spans [4, 5); (., 0): the word is V[0]="甲";
+```
+
+The backward dag file is a flattened array of the following:
+
+```c
+18             // there are 18 numbers in this segment, including "18" itself;
+4              // there are 4 nodes in the adjacency list;
+4 3 -1         // current edge start is node 3;
+               // (4, .): the word spans [3, 4); (., 3): the word is V[3]="乙";
+3 0 4 1 -1     // current edge start is node 2;
+               // (3, .): the word spans [2, 3); (., 0): the word is V[0]="甲";
+               // (3, .): the word spans [2, 4); (., 1): the word is V[1]="甲乙";
+2 3 -1         // current edge start is node 1;
+               // (2, .): the word spans [1, 2); (., 3): the word is V[3]="乙";
+1 0 2 1 -1     // current edge start is node 0;
+               // (1, .): the word spans [0, 1); (., 0): the word is V[0]="甲";
+               // (2, .): the word spans [0, 2): (., 1): the word is V[1]="甲乙";
+
+19             // there are 18 numbers in this segment, including "18" itself;
+5              // there are 5 nodes in the adjacency list;
+5 0 -1         // current edge start is node 4;
+               // (5, .): the word spans [4, 5); (., 0): the word is V[0]="甲";
+4 3 -1         // current edge start is node 3;
+               // (4, .): the word spans [3, 4); (., 3): the word is V[3]="乙";
+-1             // current edge start is node 2, and there is no edge;
+2 3 -1         // current edge start is node 1;
+               // (2, .): the word spans [1, 2); (., 3): the word is V[3]="乙";
+1 0 2 1 3 2 -1 // current edge start is node 0;
+               // (1, .): the word spans [0, 1); (., 0): the word is V[0]="甲";
+               // (2, .): the word spans [0, 2); (., 1): the word is V[1]="甲乙";
+               // (3, .): the word spans [0, 3): (., 2): the word is V[2]="甲乙丙";
+```
+"""
+
 from collections import defaultdict
 from collections.abc import Iterable
 
