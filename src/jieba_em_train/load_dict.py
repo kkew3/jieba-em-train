@@ -28,7 +28,7 @@ def parse_rime_dict_header(header: str):
     return obj
 
 
-def load_rime_dict_into_vocab(v: Vocab, rime_dict_path):
+def load_rime_dict_into_vocab(v: Vocab, rime_dict_path, mark_as_main: bool):
     header_lines = []
     stage = "before_header"
     columns = None
@@ -50,7 +50,7 @@ def load_rime_dict_into_vocab(v: Vocab, rime_dict_path):
                     table_path = Path(rime_dict_path).parent / (
                         name + ".dict.yaml"
                     )
-                    load_rime_dict_into_vocab(v, table_path)
+                    load_rime_dict_into_vocab(v, table_path, mark_as_main)
                 stage = "payload"
                 continue
             if stage == "before_header":
@@ -69,4 +69,4 @@ def load_rime_dict_into_vocab(v: Vocab, rime_dict_path):
                     freq = int(token)
             if word is not None and freq is not None and freq > 0:
                 with contextlib.suppress(ValueError):
-                    v.append(word, freq)
+                    v.append(word, freq, is_main=mark_as_main)
