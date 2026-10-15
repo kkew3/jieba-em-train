@@ -105,7 +105,6 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from collections.abc import Iterable
 
-from tqdm import tqdm
 import ahocorasick
 import numpy as np
 

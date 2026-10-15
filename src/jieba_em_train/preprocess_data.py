@@ -9,7 +9,6 @@ from tempfile import NamedTemporaryFile
 import datasets
 import jieba
 from bs4 import BeautifulSoup
-from tdigest import TDigest
 from tqdm import tqdm
 
 
