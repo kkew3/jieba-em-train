@@ -1,3 +1,4 @@
+def suggest_tau(dag_name: str) -> float: ...
 def compute_values(
     hat_logprobs: list[float],
     dag_name: str,
