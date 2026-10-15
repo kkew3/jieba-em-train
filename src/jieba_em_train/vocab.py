@@ -88,24 +88,9 @@ class Vocab:
     def __setitem__(self, key, freq):
         raise RuntimeError("use self.update_freq(key, freq) instead")
 
-    def add(
-        self,
-        word: str,
-        freq: int,
-        tag: str | None = None,
-        update: bool = False,
-    ):
-        if word in self.tok2idx:
-            idx = self.tok2idx[word]
-            if (
-                self.idx2freq[idx] != freq or self.idx2tag[idx] != tag
-            ) and not update:
-                raise ValueError(
-                    "word already exists with a different freq/tag"
-                )
-            self.update_freq(word, freq)
-            self.idx2tag[self.tok2idx[word]] = tag
-            return None
+    def append(self, word: str, freq: int, tag: str | None = None):
+        if word in self:
+            raise ValueError("word already exists")
         idx = len(self)
         self.idx2tok.append(word)
         self.idx2freq.append(freq)
@@ -152,7 +137,7 @@ class Vocab:
             word, freq, *tag = line.rstrip("\n").split()
             freq = int(freq)
             if tag:
-                v.add(word, freq, tag[0])
+                v.append(word, freq, tag[0])
             else:
-                v.add(word, freq)
+                v.append(word, freq)
         return v

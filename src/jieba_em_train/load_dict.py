@@ -13,9 +13,9 @@ def load_jieba_dict(jieba_dict_path: str):
             word, freq, *tag = line.rstrip("\n").split()
             freq = int(freq)
             if freq > 0 and tag:
-                v.add(word, freq, tag[0])
+                v.append(word, freq, tag[0])
             elif freq > 0:
-                v.add(word, freq)
+                v.append(word, freq)
     return v
 
 
@@ -69,4 +69,4 @@ def load_rime_dict_into_vocab(v: Vocab, rime_dict_path):
                     freq = int(token)
             if word is not None and freq is not None and freq > 0:
                 with contextlib.suppress(ValueError):
-                    v.add(word, freq)
+                    v.append(word, freq)

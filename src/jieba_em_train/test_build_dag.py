@@ -10,7 +10,7 @@ from .vocab import Vocab
 def test_build_dag():
     v = Vocab()
     for word in ["甲", "甲乙", "甲乙丙", "乙"]:
-        v.add(word, 2)
+        v.append(word, 2)
     sentences = ["甲乙甲乙", "甲乙丙乙甲"]
 
     with tempfile.TemporaryDirectory(
