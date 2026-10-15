@@ -30,6 +30,10 @@ def val_against_freq_c(val_msra_path: str, v: Vocab, log_theta):
     return best_freq_c, best_score
 
 
+def suggest_tau(dag_name: str):
+    return _core.suggest_tau(dag_name)
+
+
 def train_loops(
     v: Vocab,
     kappa: float,
