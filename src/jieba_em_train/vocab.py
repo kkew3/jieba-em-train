@@ -1,4 +1,7 @@
 import math
+from typing import TypeAlias
+
+VocabKey: TypeAlias = str | int
 
 
 class Vocab:
@@ -23,14 +26,14 @@ class Vocab:
             )
         return NotImplemented
 
-    def __contains__(self, key):
+    def __contains__(self, key: VocabKey):
         if isinstance(key, int):
             return 0 <= key < len(self)
         if isinstance(key, str):
             return key in self.idx2tok
         raise TypeError("key")
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: VocabKey):
         if isinstance(key, int):
             return self.idx2tok[key]
         if isinstance(key, str):
@@ -43,7 +46,7 @@ class Vocab:
     def items(self):
         return self.tok2idx.items()
 
-    def freq(self, key):
+    def freq(self, key: VocabKey):
         if isinstance(key, int):
             return self.idx2freq[key]
         if isinstance(key, str):
@@ -55,14 +58,14 @@ class Vocab:
             self.total_freq = self.total_freq - self.idx2freq[i] + value
             self.idx2freq[i] = value
 
-    def tag(self, key):
+    def tag(self, key: VocabKey):
         if isinstance(key, int):
             return self.idx2tag[key]
         if isinstance(key, str):
             return self.idx2tag[self.tok2idx[key]]
         raise TypeError("key")
 
-    def update_freq(self, key, freq):
+    def update_freq(self, key: VocabKey, freq: int):
         if isinstance(key, int):
             old_freq = self.idx2freq[key]
             self.idx2freq[key] = freq
@@ -77,7 +80,13 @@ class Vocab:
     def __setitem__(self, key, freq):
         raise RuntimeError("use self.update_freq(key, freq) instead")
 
-    def add(self, word, freq, tag=None, update=False):
+    def add(
+        self,
+        word: str,
+        freq: int,
+        tag: str | None = None,
+        update: bool = False,
+    ):
         if word in self.tok2idx:
             idx = self.tok2idx[word]
             if (
@@ -97,12 +106,12 @@ class Vocab:
         self.total_freq += freq
         return idx
 
-    def log_prob(self, word, default="-inf"):
-        if word not in self:
-            return float(default)
-        if self.freq(word) == 0:
+    def log_prob(self, key: VocabKey, default: float = float("-inf")):
+        if key not in self:
+            return default
+        if self.freq(key) == 0:
             return float("-inf")
-        return math.log(self.freq(word)) - math.log(self.total_freq)
+        return math.log(self.freq(key)) - math.log(self.total_freq)
 
     def as_logprob_array(self):
         import numpy as np
@@ -124,7 +133,7 @@ class Vocab:
                 outfile.write(f"{word} {freq} {tag}\n")
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: str):
         with open(path, encoding="utf-8") as infile:
             return cls.loadfile(infile)
 
