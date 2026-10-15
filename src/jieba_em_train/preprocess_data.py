@@ -1,13 +1,13 @@
 import shutil
-from pathlib import Path
-from tempfile import NamedTemporaryFile
 from argparse import ArgumentParser
 from dataclasses import dataclass
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
+import datasets
 import jieba
 from bs4 import BeautifulSoup
 from tdigest import TDigest
-import datasets
 from tqdm import tqdm
 
 
