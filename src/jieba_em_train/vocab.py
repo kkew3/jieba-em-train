@@ -94,6 +94,7 @@ class Vocab:
         tag: str | None = None,
         is_main: bool = True,
     ):
+        """Append word to self. Raise `ValueError` on duplicate word."""
         if word in self:
             raise ValueError("word already exists")
         idx = len(self)
@@ -104,6 +105,37 @@ class Vocab:
         self.tok2idx[word] = idx
         self.total_freq += freq
         return idx
+
+    def upsert(
+        self,
+        word: str,
+        freq: int,
+        tag: str | None = None,
+        is_main: bool = True,
+        update: bool = False,
+    ) -> bool:
+        """
+        Update/append a word. If there is duplicate word with exactly the
+        same (frequency, tag and is_main marker), skip silently. Otherwise,
+        update the word if `update` is True. Return whether an upsert has been
+        performed.
+        """
+        try:
+            self.append(word, freq, tag, is_main)
+            return True
+        except ValueError:
+            orig_freq = self.freq(word)
+            orig_tag = self.tag(word)
+            orig_main = self.is_main(word)
+            if freq == orig_freq and tag == orig_tag and is_main == orig_main:
+                return False
+            if not update:
+                return False
+            idx = self.tok2idx[word]
+            self.update_freq(idx, freq)
+            self.idx2tag = tag
+            self.idx2main = is_main
+            return True
 
     def log_prob(self, key: VocabKey, default: float = float("-inf")):
         if key not in self:
