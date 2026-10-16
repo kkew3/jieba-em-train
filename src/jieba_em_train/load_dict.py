@@ -1,4 +1,3 @@
-import contextlib
 from pathlib import Path
 
 import yaml
@@ -13,9 +12,9 @@ def load_jieba_dict(jieba_dict_path: str):
             word, freq, *tag = line.rstrip("\n").split()
             freq = int(freq)
             if freq > 0 and tag:
-                v.append(word, freq, tag[0])
+                v.upsert(word, freq, tag[0], update=True)
             elif freq > 0:
-                v.append(word, freq)
+                v.upsert(word, freq, update=True)
     return v
 
 
@@ -68,5 +67,4 @@ def load_rime_dict_into_vocab(v: Vocab, rime_dict_path, mark_as_main: bool):
                 elif token_name == "weight":
                     freq = int(token)
             if word is not None and freq is not None and freq > 0:
-                with contextlib.suppress(ValueError):
-                    v.append(word, freq, is_main=mark_as_main)
+                v.upsert(word, freq, is_main=mark_as_main)
