@@ -71,7 +71,7 @@ class GlobalPrior:
         """Return log_theta."""
         logit_theta = np.logaddexp(
             np.log(np.array(word_counts)),
-            np.log(self.kappa) + v.as_logprob_array,
+            np.log(self.kappa) + v.as_logprob_array(),
         )
         return logit_theta - sp_special.logsumexp(logit_theta)
 
