@@ -53,6 +53,10 @@ def suggest_tau(corpus_file: str):
     return 1 / (1 + b_star)
 
 
+def log(x):
+    return np.log(np.maximum(x, 1e-20))
+
+
 @dataclass
 class GlobalPrior:
     """
@@ -70,8 +74,8 @@ class GlobalPrior:
     def apply_prior(self, word_counts: list[float], v: Vocab):
         """Return log_theta."""
         logit_theta = np.logaddexp(
-            np.log(np.array(word_counts)),
-            np.log(self.kappa) + v.as_logprob_array(),
+            log(np.array(word_counts)),
+            log(self.kappa) + v.as_logprob_array(),
         )
         return logit_theta - sp_special.logsumexp(logit_theta)
 
@@ -110,14 +114,14 @@ class MainSubsetPrior:
             )
             + self.mix_prior
         )
-        log_pi = np.log(word_counts_partition_arr) - np.log(
+        log_pi = log(word_counts_partition_arr) - log(
             np.sum(word_counts_partition_arr)
         )
         log_prior = v.as_logprob_array()
-        log_word_counts = np.log(word_counts_)
+        log_word_counts = log(word_counts_)
         log_prior_main = log_prior - sp_special.logsumexp(log_prior[main_mask])
         logit_theta_main = np.logaddexp(
-            log_word_counts, np.log(self.kappa_main) + log_prior_main
+            log_word_counts, log(self.kappa_main) + log_prior_main
         )
         log_theta_main = logit_theta_main - sp_special.logsumexp(
             logit_theta_main
@@ -126,7 +130,7 @@ class MainSubsetPrior:
             log_prior[~main_mask]
         )
         logit_theta_non_main = np.logaddexp(
-            log_word_counts, np.log(self.kappa_non_main) + log_prior_non_main
+            log_word_counts, log(self.kappa_non_main) + log_prior_non_main
         )
         log_theta_non_main = logit_theta_non_main - sp_special.logsumexp(
             logit_theta_non_main
