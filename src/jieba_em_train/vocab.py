@@ -54,6 +54,7 @@ class Vocab:
         v.idx2tok = self.idx2tok.copy()
         v.idx2freq = self.idx2freq.copy()
         v.idx2tag = self.idx2tag.copy()
+        v.idx2main = self.idx2main.copy()
         v.total_freq = self.total_freq
         return v
 
