@@ -17,6 +17,8 @@ dependencies = [
     "matplotlib>=3.11.2",
     "numba>=0.68.0",
     "numpy>=2.5.4",
+    "optuna>=5.0.0",
+    "optuna-dashboard>=0.21.0",
     "pyahocorasick>=2.3.1",
     "pyyaml>=6.0.3",
     "rjieba",
