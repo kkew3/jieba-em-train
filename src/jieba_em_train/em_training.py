@@ -151,6 +151,7 @@ def train_loops(
     val_msra_path: str,
     n_jobs: int = 1,
     return_option: Literal["best", "all"] = "best",
+    verbose: bool = True,
 ):
     log_theta = v.as_logprob_array()
     hat_logprobs = log_theta + math.log(1 - tau)
@@ -158,7 +159,8 @@ def train_loops(
 
     freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
     results[-1] = (f1, log_theta, tau, freq_c)
-    print(f"[{now()}] ITER -1 F1: {f1}")
+    if verbose:
+        print(f"[{now()}] ITER -1 F1: {f1}")
     for train_iter in range(n_iter):
         word_counts, seqlen, cnt = _core.compute_values_parallel(
             hat_logprobs.tolist(), dag_name, n_jobs=n_jobs
@@ -173,7 +175,8 @@ def train_loops(
     best_iter, (best_f1, best_log_theta, best_tau, best_freq_c) = max(
         results_list, key=lambda x: x[1][0]
     )
-    print(f"Best iter: {best_iter} at F1: {best_f1}")
+    if verbose:
+        print(f"Best iter: {best_iter} at F1: {best_f1}")
     if return_option == "all":
         return results
     return best_f1, (best_log_theta, best_tau, best_freq_c)
