@@ -62,22 +62,45 @@ fn isclose(a: f64, b: f64) -> bool {
     (a - b).abs() <= atol + rtol * b.abs()
 }
 
+const S: usize = 128;
+
+struct Buffers {
+    bscores: [f64; S],
+    fscores: [f64; S],
+    seqlenbuf: [f64; S],
+    lsebuf: [f64; S],
+    lsebuf2: [f64; S],
+}
+
+impl Buffers {
+    fn zeros() -> Self {
+        Self {
+            bscores: [0.0; _],
+            fscores: [0.0; _],
+            seqlenbuf: [0.0; _],
+            lsebuf: [0.0; _],
+            lsebuf2: [0.0; _],
+        }
+    }
+}
+
 fn update_values_once(
     values: &mut Values,
     mut dag_reader: impl BufRead,
     hat_logprobs: &[f64],
     sz: &mut usize,
+    buffers: &mut Buffers,
 ) -> io::Result<()> {
     if *sz == 0 {
         return Ok(());
     }
 
     let n = read_i32(&mut dag_reader, sz)? as usize;
-    let mut bscores = F64Buf::zeros(n + 1);
-    let mut fscores = F64Buf::zeros(n + 1);
-    let mut seqlenbuf = F64Buf::zeros(n + 1);
-    let mut lsebuf = F64Buf::zeros(n);
-    let mut lsebuf2 = F64Buf::zeros(n);
+    let mut bscores = F64Buf::zeros(&mut buffers.bscores, n + 1);
+    let mut fscores = F64Buf::zeros(&mut buffers.fscores, n + 1);
+    let mut seqlenbuf = F64Buf::zeros(&mut buffers.seqlenbuf, n + 1);
+    let mut lsebuf = F64Buf::zeros(&mut buffers.lsebuf, n);
+    let mut lsebuf2 = F64Buf::zeros(&mut buffers.lsebuf2, n);
 
     // Compute backward scores.
     for start in (0..n).rev() {
@@ -132,6 +155,7 @@ fn compute_values(
     offset: usize,
     mut sz: usize,
 ) -> io::Result<(Vec<f64>, f64, f64)> {
+    let mut buffers = Buffers::zeros();
     let dag_path = format!("{dag_name}.dag");
     let mut values = crate::Values::zeros(hat_logprobs.len());
     let file = File::open(dag_path)?;
@@ -147,6 +171,7 @@ fn compute_values(
             &mut dag_reader,
             &hat_logprobs,
             &mut sz,
+            &mut buffers,
         )?;
     }
     Ok((
