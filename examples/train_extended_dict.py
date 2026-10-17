@@ -37,7 +37,7 @@ def objective(trial: Trial):
         training_budget=trial.suggest_categorical("training_budget", [10]),
         val_msra_path=VAL_MSRA_PATH,
         n_jobs=4,
-        verbose=False,
+        verbose=True,
     )
     est.fit(DAG_NAME)
     return (
