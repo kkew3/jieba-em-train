@@ -170,7 +170,8 @@ def train_loops(
         hat_logprobs = log_theta + math.log(1 - tau)
         freq_c, f1 = val_against_freq_c(val_msra_path, v, log_theta)
         results[train_iter] = (f1, log_theta, tau, freq_c)
-        print(f"[{now()}] ITER {train_iter} F1: {f1}")
+        if verbose:
+            print(f"[{now()}] ITER {train_iter} F1: {f1}")
     results_list = list(results.items())
     best_iter, (best_f1, best_log_theta, best_tau, best_freq_c) = max(
         results_list, key=lambda x: x[1][0]
