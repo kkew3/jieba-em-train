@@ -157,7 +157,7 @@ fn compute_values(
 ) -> io::Result<(Vec<f64>, f64, f64)> {
     let mut buffers = Buffers::zeros();
     let dag_path = format!("{dag_name}.dag");
-    let mut values = crate::Values::zeros(hat_logprobs.len());
+    let mut values = Values::zeros(hat_logprobs.len());
     let file = File::open(dag_path)?;
     if sz == 0 {
         let file_len = file.metadata()?.len();
@@ -166,7 +166,7 @@ fn compute_values(
     let mut dag_reader = BufReader::new(file);
     dag_reader.seek(SeekFrom::Start(offset as u64))?;
     while sz > 0 {
-        crate::update_values_once(
+        update_values_once(
             &mut values,
             &mut dag_reader,
             &hat_logprobs,
