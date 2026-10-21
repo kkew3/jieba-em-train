@@ -34,7 +34,7 @@ def objective(trial: Trial):
             "freq_c",
             [None, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF, 0xFFFFFFFFFF, 0xFFFFFFFFFFFF],
         ),
-        training_budget=trial.suggest_categorical("training_budget", [10]),
+        training_budget=trial.suggest_categorical("training_budget", [6]),
         val_msra_path=VAL_MSRA_PATH,
         n_jobs=4,
         verbose=True,
