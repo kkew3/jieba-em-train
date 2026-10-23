@@ -40,7 +40,8 @@ def count_pred_stats(tp, fp, fn, jb, segmented_sentences):
 
 def to_freq(log_theta, c: int | float | None = None):  # noqa: PYI041
     if c is None:
-        c = math.log(0xFFFFFFFF >> 2)
+        # 1e-6: so that the minimum freq is 1 even under floating point error.
+        c = float(-np.min(log_theta)) + 1e-6
     elif isinstance(c, int):
         c = math.log(c)
     freqs = [int(x) for x in np.round(np.exp(log_theta + c), 0).tolist()]

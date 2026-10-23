@@ -118,12 +118,7 @@ class EmDictionaryEstimator:
         v = Vocab.load(
             self.vocab_path, jieba_compatible=self.vocab_jieba_compatible
         )
-        freq_c = (
-            -float(np.min(self.log_theta_)) + 1e-6
-            if self.freq_c is None
-            else self.freq_c
-        )
-        self.jb_ = eval_jieba.configure_jieba(v, self.log_theta_, freq_c)
+        self.jb_ = eval_jieba.configure_jieba(v, self.log_theta_, self.freq_c)
 
     def score(self, X: str, y=None):
         if not self.is_fitted_:
@@ -134,14 +129,9 @@ class EmDictionaryEstimator:
         v = Vocab.load(
             self.vocab_path, jieba_compatible=self.vocab_jieba_compatible
         )
-        freq_c = (
-            -float(np.min(self.log_theta_)) + 1e-6
-            if self.freq_c is None
-            else self.freq_c
-        )
 
         return eval_jieba.run_eval(
-            segmented_sents_path, v, self.log_theta_, freq_c
+            segmented_sents_path, v, self.log_theta_, self.freq_c
         ).get()
 
     def predict(self, X: str):
