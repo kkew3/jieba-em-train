@@ -89,7 +89,8 @@ class Fbeta:
         return compute_f_beta(self.tp, self.fp, self.fn, beta)
 
 
-def iter_segmented_sentences(path: Path):
+def iter_segmented_sentences(path: Path | str):
+    path = Path(path)
     if path.suffix == ".xml":
         # MSRA bakeoff xml.
         with open(path, "rb") as infile:
