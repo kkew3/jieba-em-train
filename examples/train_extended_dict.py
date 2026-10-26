@@ -6,7 +6,7 @@ from optuna import Trial
 from jieba_em_train.sklearn import EmDictionaryEstimator
 
 
-VOCAB_PATH = "train_dicts/rime_base.vocab"
+VOCAB_PATH = "train_dicts/jieba_rime_base.vocab"
 VAL_MSRA_PATH = "/scratch/jieba-em-train/msra_bakeoff3_training.txt"
 DAG_NAME = "/scratch/jieba-em-train/train_rime_base"
 TEST_PATH = "corpora/private_testset.txt"
