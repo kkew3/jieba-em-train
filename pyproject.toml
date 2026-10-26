@@ -47,8 +47,8 @@ cache-keys = [
 ]
 
 [tool.uv.sources]
-rjieba = { git = "http://gitea.dell-p3460.local/kkew3/rjieba-py.git", rev = "dev" }
 jieba = { git = "https://github.com/tirkarthi/jieba.git", rev = "fix-warnings" }
+rjieba = { git = "https://github.com/messense/rjieba-py.git", rev = "4be9277461222cd8b01078969ab5bef227466e49" }
 
 [tool.ruff]
 line-length = 80

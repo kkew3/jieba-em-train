@@ -1172,7 +1172,7 @@ requires-dist = [
     { name = "optuna-dashboard", specifier = ">=0.21.0" },
     { name = "pyahocorasick", specifier = ">=2.3.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "rjieba", git = "http://gitea.dell-p3460.local/kkew3/rjieba-py.git?rev=dev" },
+    { name = "rjieba", git = "https://github.com/messense/rjieba-py.git?rev=4be9277461222cd8b01078969ab5bef227466e49" },
     { name = "scikit-learn", specifier = ">=1.9.1" },
     { name = "scipy", specifier = ">=1.18.1" },
     { name = "tqdm", specifier = ">=4.70.1" },
@@ -2881,7 +2881,7 @@ wheels = [
 [[package]]
 name = "rjieba"
 version = "0.2.1"
-source = { git = "http://gitea.dell-p3460.local/kkew3/rjieba-py.git?rev=dev#a9cd43ef4a3377a06cc5f17ebb11849a386d1283" }
+source = { git = "https://github.com/messense/rjieba-py.git?rev=4be9277461222cd8b01078969ab5bef227466e49#4be9277461222cd8b01078969ab5bef227466e49" }
 
 [[package]]
 name = "rpds-py"
