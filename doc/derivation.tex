@@ -1,0 +1,263 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{bbm}
+\usepackage{hyperref}
+
+\title{Jieba dictionary training derivation}
+\author{Kaiwen Wu}
+\date{October 12, 2026}
+
+\newcommand{\jb}{\texttt{jieba}}
+
+\newtheorem{theorem}{Theorem}
+
+\begin{document}
+\maketitle
+
+\section{Preliminaries and problem setup}
+\jb\ (\url{https://github.com/fxsjy/jieba}) is a well-known Chinese word segmentation library in Python.
+It comes with a default dictionary $D$ of Chinese words $w$, each paired with a frequency score $f_w$.
+At inference time, it builds a directed acyclic graph (DAG) of dictionary words from every sentence.
+The edge $\mathsf{e}_{i \to j}$ in the DAG represents a dictionary word spanning from character $i$ (inclusive) to character $j$ (exclusive), with weight $s_\mathsf{e} \coloneqq \log f_\mathsf{e} - \log f_0$, where $f_0 = \sum_{w \in D} f_w$.
+Notice that we abuse the edge notation to also mean the corresponding dictionary word.
+Thus, for a sentence of length $m$, a path $\mathsf{p}$ the connects node 0 to node $m$ defines a segmentation, and the sum of the edge weights $s_\mathsf{p} \coloneqq \sum_{\mathsf{e} \in \mathsf{p}} s_\mathsf{e}$ is the unigram log likelihood of a sequence of length $|\mathsf{p}|$.\footnote{Strictly speaking, the edge weights sum is \emph{not} the log likelihood of the segmentation $\mathsf{p}$, as we'll explain in the next section.}
+Since the topological ordering of the nodes is known, we're able to decode the best segmentation $\mathsf{p}_\ast$ with the largest $s_\mathsf{p}$ efficiently by dynamic programming (DP).
+Some more details are:
+
+\begin{itemize}
+    \item Out-of-vocabulary (OOV) words are split into characters $\mathsf{e}_{i \to i+1}$ and assigned edge weight $\log{1}-\log f_0$ when building the DAG. Hence, if there are many OOV words, the edge weights can no longer be interpreted as normalized log-probs.
+    \item A hidden Markov model is optionally applied to OOV fragments to provide finer segmentation.
+\end{itemize}
+
+Our task is to augment the default dictionary $D$ with a user dictionary $U$, and hope that the word segmentation quality is not impaired by the addition.
+We cannot assume the persistence of quality because $U$ may contain frequency scores incompatible with $D$, e.g.\@ one that originates from \url{https://github.com/iDvel/rime-ice}, and thus creating competing candidate paths in the DAG that negatively affects the decision.
+It's worth noting that word frequencies from $U$ are sometimes adjusted in an ad hoc manner (see \url{https://github.com/fxsjy/jieba/issues}), which is inefficient and error-prone.
+Since $D \cup U$ is often sufficently large, we assume absence of OOV words thereafter to eliminate the cluttering of handling them.
+
+\section{A generative unigram model of sentences}
+Out of the DAG implementation, we prefer a different set of notations.
+In this section, we use the following notations:\@
+$S$ for a segmentation, which is a sequence of dictionary words;
+$x$ for an unsegmented sentence;
+$S_\oplus$ for the concatenation of the words in $S$, which itself is a sentence.
+We denote by $D$ to refer the dictionary in general sense, since whether it's the default or the augmented dictionary usually does not matter.
+We also denote the parameters of a language model by $\boldsymbol\phi$.
+For example, $\boldsymbol\phi$ often includes the dictionary frequency scores $f_w$, whose normalized counterpart in terms of the dictionary is denoted by $\theta_w$.
+
+\jb's segmentation log-prob $s_\mathsf{p}$, can be rewritten in our current parlance as $\log \prod_{w \in S} \theta_w$.
+We note that $\prod_{w \in S} \theta_w$ is \emph{not} the likelihood $P(S; \theta)$ of observing $S$.
+It's instead the condition probability $P(S \mid |S|\ \text{fixed}; \theta)$.
+
+\begin{theorem}
+    The sum of $P(S; \theta)$ over all possible $S$ does not sum to 1.
+\end{theorem}
+\begin{proof}
+    \[
+        \begin{aligned}
+            \sum_S P(S; \theta)
+            &= \sum_{m=0}^\infty \sum_{S: |S|=m} P(S; \theta)\\
+            &= \sum_{m=0}^\infty \sum_{S: |S|=m} \prod_{w \in S} \theta_w\\
+            &= \sum_{m=0}^\infty \prod_{i=1}^m \sum_{w_i \in D} \theta_{w_i}\\
+            &= \sum_{m=0}^\infty \prod_{i=1}^m 1\,,
+        \end{aligned}
+    \]
+    
+    \noindent
+    and the r.h.s.\@ diverges.
+    Notice that as a byproduct we have shown that $\forall m$,
+
+    \[
+        P(S \mid |S|=m; \theta) = \prod_{w \in S} \theta_w\,.
+    \]
+\end{proof}
+
+The reason is that there is no stopping rule in the generative story of \jb's likelihood.
+For this purpose, there are two options:
+(1) define $\hat{D} \coloneqq D \cup \{\epsilon\}$ and stop generating new words after $\epsilon$ has been sampled, then $\hat{\theta}_w \propto \theta_w$;
+(2) for each token to be generated, first toss a biased coin whose head probability is $\tau$ to decide whether to stop, and then sample a token from $D$ if we have decided to continue.
+It's straightforward to show that if $\tau = \hat{\theta}_\epsilon$, then $\hat{\theta}_w = \theta_w (1-\tau)$, or in other words, the two stories are equivalent.
+Considering the fact that we ultimately need to return the unigram frequencies as output, parameterizing the stopping rule as an extra $\tau$ is more convenient, since it does not affect the normalization of $\theta_w$'s, neither does it affect how we will enforce prior on $\theta_w$'s.
+
+\subsection{Learning}
+Given a corpus of sentences $C$, we will train $\boldsymbol\phi = (\theta, \tau)$ by MLE/MAP of the log marginal likelihood.
+We will achieve this by EM.
+
+The EM auxiliary function is
+
+\[
+    \begin{aligned}
+        Q(\boldsymbol\phi \mid \boldsymbol\phi^\mathrm{old})
+        &= \sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) \log P(S, x; \boldsymbol\phi)\\
+        &= \sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) (\log P(S; \boldsymbol\phi) + \log P(x \mid S))\,.
+    \end{aligned}
+\]
+
+\noindent
+Since $P(x \mid S) = \mathbbm{1}[x = S_\oplus]$ is irrelevant of $\boldsymbol\phi$, and the posterior $P(S \mid x)$ is only supported on region where $x = S_\oplus$, we can safely drop this term.
+Then,
+
+\begin{equation}\label{eq:em-aux}
+    Q(\boldsymbol\phi \mid \boldsymbol\phi^\mathrm{old})
+    = \sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) \log P(S; \boldsymbol\phi)\,.
+\end{equation}
+
+\subsubsection{Learning \texorpdfstring{$\theta$}{theta}}
+First, write:
+
+\[
+    \begin{aligned}
+        \log P(S; \boldsymbol\phi)
+        &= \log\left\{\tau (1-\tau)^{|S|} \prod_{w \in S} \theta_w\right\}\\
+        &= \log\left\{\tau \prod_{w \in S} (1-\tau) \theta_w\right\}\\
+        &= \log\left\{\tau \prod_{w \in S} \hat{\theta}_w\right\}\\
+        &= \log\tau + \sum_{w \in S} \log \hat{\theta}_w\\
+        &= \log\tau + \sum_{w \in D} N_w(S) \log \hat{\theta}_w\,,
+    \end{aligned}
+\]
+
+\noindent
+where $N_w(S)$ denotes the number of occurrences of $w$ in $S$.
+Plugging in to Equation~\eqref{eq:em-aux} gives:
+
+\[
+    \begin{aligned}
+        Q(\boldsymbol\phi \mid \boldsymbol\phi^\mathrm{old})
+        &= \sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old})\left(\log\tau + \sum_{w \in D} N_w(S) \log \hat{\theta}_w\right)\\
+        &= \sum_{x \in C}\sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) \sum_{w \in D} N_w(S) \log \hat{\theta}_w + \text{constant}\\
+        &= \sum_{w \in D} \left[\sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) N_w(S)\right] \log ((1-\tau) \theta_w) + \text{constant}\\
+        &= \sum_{w \in D} \left[\sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) N_w(S)\right] \log \theta_w + \text{constant}\,.
+    \end{aligned}
+\]
+
+\noindent
+Hence,
+
+\[
+    \theta_w \propto \sum_{x \in C} \mathbb{E}[N_w(S) \mid x; \boldsymbol\phi^\mathrm{old}]\,,
+\]
+
+\noindent
+up to some additive offset from Dirichlet prior or pseudocounts.
+
+\subsubsection{Learning \texorpdfstring{$\tau$}{tau}}
+Again, from Equation~\eqref{eq:em-aux},
+
+\[
+    \begin{aligned}
+        Q(\boldsymbol\phi \mid \boldsymbol\phi^\mathrm{old})
+        &= \sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) \log \left(\tau (1-\tau)^{|S|} \prod_{w \in S} \theta_w\right)\\
+        &= \sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) (\log\tau + |S| \log(1-\tau)) + \text{constant}\\
+        &= |C| \log\tau + \left[\sum_{x \in C} \sum_S P(S \mid x; \boldsymbol\phi^\mathrm{old}) |S|\right] \log(1-\tau) + \text{constant}\,.
+    \end{aligned}
+\]
+
+\noindent
+Taking derivative w.r.t.\@ $\tau$ and making it zero yields:
+
+\[
+    \tau = \frac{1}{1 + \tilde{m}}\,,
+\]
+
+\noindent
+where
+
+\[
+    \tilde{m} = \frac{1}{|C|} \sum_{x \in C} \mathbb{E}[|S| \mid x; \boldsymbol\phi^\mathrm{old}]\,.
+\]
+
+\subsubsection{Finding the expectation in \texorpdfstring{$\theta$}{theta} update}
+To evaluate $\mathbb{E}[N_w(S) \mid x]$, first notice that for $S$ such that $S_\oplus = x$,
+
+\[
+    N_w(S)
+    = \sum_{0 \le i < j \le |x|} \mathbbm{1}[x_{i:j} = w \land (i,j) \in S]
+    = \sum_{(i,j): x_{i:j} = w} \mathbbm{1}[(i,j) \in S]
+\]
+
+\noindent
+Hence,
+
+\[
+    \begin{aligned}
+        \mathbb{E}[N_w(S) \mid x]
+        &= \sum_S P(S \mid x) \sum_{(i,j): x_{i:j} = w} \mathbbm{1}[(i,j) \in S]\\
+        &= \sum_{(i,j): x_{i:j} = w} \sum_{S: (i,j) \in S} P(S) \Big/ P(x)\\
+        &= \sum_{(i,j): x_{i:j} = w} \sum_{S_p: (\cdot, i) \in S_p} \sum_{S_s: (j, \cdot) \in S_s} P(S_p \oplus (x_{i:j}) \oplus S_s) \Big/ P(x)\\
+        &= \sum_{(i,j): x_{i:j} = w} \sum_{S_p: (\cdot, i) \in S_p} \sum_{S_s: (j, \cdot) \in S_s} \tau \left(\prod_{w_1 \in S_p} \hat{\theta}_{w_1} \cdot \hat{\theta}_w \cdot \prod_{w_2 \in S_s} \hat{\theta}_{w_2}\right) \Big/ P(x)\\
+        &= \tau \sum_{(i,j): x_{i:j} = w} \hat{\theta}_w \sum_{S_p: (\cdot, i) \in S_p} \prod_{w_1 \in S_p} \hat{\theta}_{w_1} \sum_{S_s: (j, \cdot) \in S_s} \prod_{w_2 \in S_s} \hat{\theta}_{w_2} \Big/ P(x)\,,
+    \end{aligned}
+\]
+
+\noindent
+where
+
+\[
+    P(x) = \tau \sum_{S: (0, \cdot) \in S \land (\cdot, |x|) \in S} \prod_{w \in S} \hat{\theta}_w\,.
+\]
+
+\noindent
+Here, $S_p$ denotes prefix segmentations that also satisifies $(0, \cdot) \in S_p$, and $S_s$ denotes suffix segmentation that also satisfies $(\cdot, |x|) \in S_s$.
+Thus, this whole problem reduces to finding:
+
+\[
+    \tau^{-1} P(x_{s:t}) = \sum_{S: (s, \cdot) \in S \land (\cdot, t) \in S} \prod_{w \in S} \hat{\theta}_w\,.
+\]
+
+\noindent
+and without loss of generality, let $s \coloneqq 0$ and $t \coloneqq n$.
+We may find $\tau^{-1} P(x_{0:n})$ by DP.
+Define $A_i \coloneqq \tau^{-1} P(x_{0:i})$.
+We need to find $A_n$.
+Then,
+
+\[
+    A_i \hat{\theta}_{x_{i:j}} = \sum_{S:(0,\cdot) \in S \land (\cdot, i) \in S} \prod_{w \in S \oplus (x_{i:j})} \hat{\theta}_w
+\]
+
+\noindent
+And thus,
+
+\[
+    A_j = \sum_{i < j} A_i \hat{\theta}_{x_{i:j}}
+\]
+
+\subsubsection{Finding the expectation in \texorpdfstring{$\tau$}{tau} update}
+To evaluate
+
+\[
+    \begin{aligned}
+        \mathbb{E}[|S| \mid x]
+        &= \sum_{S: (0,\cdot) \in S \land (\cdot,|x|) \in S} P(S \mid x) |S|\\
+        &= \sum_{S: (0,\cdot) \in S \land (\cdot,|x|) \in S} P(S) |S| \Big/ P(x)\,.
+    \end{aligned}
+\]
+
+\noindent
+As before, we define $A_i \coloneqq \tau^{-1} P(x_{0:i})$.
+We also define
+
+\[
+    B_i \coloneqq \tau^{-1} \sum_{S:(0,\cdot) \in S \land (\cdot,i) \in S} P(S) |S|\,.
+\]
+
+\noindent
+We need to find $B_{|x|}$.
+Then,
+
+\[
+    \begin{aligned}
+        A_i \hat{\theta}_{x_{i:j}} + B_i \hat{\theta}_{x_{i:j}}
+        &= \tau^{-1} \sum_{S:(0,\cdot) \in S \land (\cdot,i) \in S} \prod_{w \in S \oplus (x_{i:j})} \hat{\theta}_w \\
+        &\quad\ + \tau^{-1} \sum_{S:(0,\cdot) \in S \land (\cdot,i) \in S} |S| \prod_{w \in S \oplus (x_{i:j})} \hat{\theta}_w\\
+        &= \tau^{-1} \sum_{S:(0,\cdot) \in S \land (\cdot,i) \in S} (|S|+1) \prod_{w \in S \oplus (x_{i:j})} \hat{\theta}_w\\
+        &= \tau^{-1} \sum_{S:(0,\cdot) \in S \land (\cdot,i) \in S} |S \oplus (x_{i:j})| \prod_{w \in S \oplus (x_{i:j})} \hat{\theta}_w
+    \end{aligned}
+\]
+
+\noindent
+Hence, $B_j = \sum_{i<j}(A_i + B_i)\hat{\theta}_{x_{i:j}}$.
+
+\end{document}
