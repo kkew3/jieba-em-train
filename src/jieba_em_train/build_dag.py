@@ -208,12 +208,20 @@ def build_dag(v: Vocab, sentences: Iterable[str], name: str):
 
 def main():
     parser = ArgumentParser(description="Create DAG files.")
+    parser.add_argument(
+        "-J",
+        dest="jieba_compatible_vocab",
+        action="store_false",
+        help="assume jieba-incompatible format in vocab_file",
+    )
     parser.add_argument("vocab_file", help="the vocabulary to load")
     parser.add_argument("sentences_file", help="the sentences file")
     parser.add_argument("out_name", help="the output stem")
     args = parser.parse_args()
 
-    v = Vocab.load(args.vocab_file)
+    v = Vocab.load(
+        args.vocab_file, jieba_compatible=args.jieba_compatible_vocab
+    )
     with open(args.sentences_file, encoding="utf-8") as infile:
         paths = build_dag(
             v, iter_sentences(infile, mininterval=5), args.out_name
